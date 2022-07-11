@@ -1,6 +1,5 @@
 #include 	"mbed.h"
 #include 	"MS5611_01BA03.h"
-#include 	"MS5525DSO.h"
 #include 	"USBSerial.h"
 #include 	"EthernetInterface.h"
 #include    "INA219.h"
@@ -36,20 +35,7 @@ SPI spi6(PG_14,PG_12,PG_13);
 I2C i2c2(PF_0,PF_1);
 I2C i2c4(PF_15,PF_14);
 
-#if(BOARD_ID == 0x01)
-MS5525DSO pressure_sensor1(&spi4, PG_3);
-MS5611_01BA03 pressure_sensor2(&spi2, PD_4);
-MS5611_01BA03 pressure_sensor3(&spi5, PF_10);
-ICM20948_DMP imu(&spi1, PF_6);
-#elif(BOARD_ID == 0x02)
-MS5525DSO pressure_sensor1(&spi1, PG_2);
-MS5525DSO pressure_sensor2(&spi1, PG_3);
-MS5525DSO pressure_sensor3(&spi1, PG_4);
-MS5525DSO pressure_sensor4(&spi2, PG_5);
-MS5525DSO pressure_sensor5(&spi2, PG_6);
-MS5611_01BA03 pressure_sensor6(&spi3, PD_4);
-MS5611_01BA03 pressure_sensor7(&spi4, PF_10);
-#elif (BOARD_ID == 0x03)
+
 Honeywell_RSC pressure_sensor1(&spi4, PF_2, PG_2);
 Honeywell_RSC pressure_sensor2(&spi2, PF_3, PG_3);
 Honeywell_RSC pressure_sensor3(&spi2, PF_4, PG_4);
@@ -58,7 +44,7 @@ Honeywell_RSC pressure_sensor5(&spi2, PA_3, PG_6);
 MS5611_01BA03 pressure_sensor6(&spi6, PD_4);
 MS5611_01BA03 pressure_sensor7(&spi5, PF_10);
 ICM20948_DMP imu(&spi1, PF_6);
-#endif
+
 
 //HTU21D temp_sensor(&i2c2);
 //MPU9250_DMP imu(PB_5, PA_6, PA_5, PF_6);
@@ -147,37 +133,6 @@ void sensor_thread() {
 	while (true)
     {
 
-#if(BOARD_ID == 0x01)
-    	//ret = temp_sensor.start_temp();
-    	pressure_sensor1.start_conv_temp();
-    	pressure_sensor2.start_conv_temp();
-		pressure_sensor3.start_conv_temp();
-
-		rtos::ThisThread::sleep_for(20);
-		pressure_sensor1.read_conv_temp();
-		pressure_sensor2.read_conv_temp();
-		pressure_sensor3.read_conv_temp();
-
-		pressure_sensor1.start_conv_press();
-		pressure_sensor2.start_conv_press();
-		pressure_sensor3.start_conv_press();
-
-		rtos::ThisThread::sleep_for(20);
-
-		pressure_sensor1.read_conv_press();
-		pressure_sensor2.read_conv_press();
-		pressure_sensor3.read_conv_press();
-
-
-		pressure_sensor1.calculate();
-		pressure_sensor2.calculate();
-		pressure_sensor3.calculate();
-
-		if(ret == 0)
-		{
-			//temp_sensor.calculate_temp();
-		}
-#elif (BOARD_ID == 0x03)		// Board Id -> Unterschiedliche Platinenversionen
 
 		pressure_sensor1.write_command_adc_read(TEMPERATURE, &temp);
 		tx_data.sensor1 = pressure_sensor1.calculate_pressure(temp);
@@ -234,7 +189,6 @@ void sensor_thread() {
 #endif
 	    event_flags.set(FLAG_CONVERSATION_SENSORS);
 	    rtos::ThisThread::sleep_for(10);
-#endif
 
 //		float p1 = pressure_sensor1.getPressure();
 //		float t1 = pressure_sensor1.getTemperature();
@@ -255,17 +209,7 @@ void ethernet_thread(Net_com* net_com) {
 	while (true)
     {
 		event_flags.wait_any(FLAG_CONVERSATION_SENSORS);		// Funktion wartet bis alle Sensordaten ausgelesen sind
-#if(BOARD_ID == 0x01)
 		tx_data.timestamp = us_ticker_read() / 1000u;
-		tx_data.sensor1 = pressure_sensor1.getPressure();
-		tx_data.sensor2 = pressure_sensor2.getPressure();
-		tx_data.sensor3 = pressure_sensor3.getPressure();
-		tx_data.temp1 = pressure_sensor1.getTemperature();
-		tx_data.temp2 = pressure_sensor2.getTemperature();
-		tx_data.temp3 = pressure_sensor3.getTemperature();
-#elif(BOARD_ID == 0x03)
-		tx_data.timestamp = us_ticker_read() / 1000u;
-#endif
 		/*if (imu.gyroDataIsReady())
 		{
 		    imu.readGyroData(&tx_data.gx, &tx_data.gy, &tx_data.gz);
@@ -353,8 +297,6 @@ void net_receive_callback(void *arg, struct udp_pcb *pcb, struct pbuf *p, const 
 int main()
 {
 
-//	i2c2.frequency(100000);
-
 	eth.set_network(IP_ADDRESS,NETMASK_ADDRESS,GATEWAY_ADDRESS);
 	eth.connect();
 #if (USB_SERIAL == 1)
@@ -384,33 +326,7 @@ int main()
 	Thread 		thread3;
 	//INA219		current_sensor(PF_0, PF_1, &ina219_data);
 
-
-//	char cmd[2];
-//	cmd[0] = 0x00;
-//	cmd[1] = 0x01;
-//
-//	i2c4.frequency(100000UL);
-//	for(uint16_t i = 0; i < 256; i++)
-//	{
-//		usb_serial.printf("%i: %i\n\r",i,  i2c4.write(i, cmd, 1));
-//
-//	}
-
-	/*if(pressure_sensor2.init() != true || \
-	   pressure_sensor3.init() != true || \
-	   pressure_sensor4.init() != true || \
-	   pressure_sensor5.init() != true || \
-	   pressure_sensor6.init() != true || \
-	   pressure_sensor7.init() != true || \
-	   pressure_sensor1.init() != true)
-	{
-		while(1);
-	}*/
-#if (BOARD_ID == 0x01)
- 	pressure_sensor1.init();
-	pressure_sensor2.init();
-	pressure_sensor3.init();
-#elif (BOARD_ID == 0x03)	// Einstellung unterschiedlicher Modi entsprechend Datenblatt
+	// Einstellung unterschiedlicher Modi entsprechend Datenblatt
 	pressure_sensor1.init(N_DR_90_SPS,NORMAL_MODE);
 	pressure_sensor2.init(N_DR_90_SPS,NORMAL_MODE);
 	pressure_sensor3.init(N_DR_90_SPS,NORMAL_MODE);
@@ -418,7 +334,6 @@ int main()
 	pressure_sensor5.init(N_DR_90_SPS,NORMAL_MODE);
 	pressure_sensor6.init();
 	pressure_sensor7.init();
-#endif
 //    usb_serial.printf("\n\n*** Sensorbox ***\r\n");
 
     thread1.start(sensor_thread);				// Sensor thread aktivieren -> Ließt Daten aus Sensoren aus
