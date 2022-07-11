@@ -46,23 +46,9 @@ MS5611_01BA03 pressure_sensor7(&spi5, PF_10);
 ICM20948_DMP imu(&spi1, PF_6);
 
 
-//HTU21D temp_sensor(&i2c2);
-//MPU9250_DMP imu(PB_5, PA_6, PA_5, PF_6);
 InterruptIn isr_imu(PA_4);
 bool imu_isr_ready = false;
 
-const INA219_TypeDef ina219_data = {
-	0x40,
-	// CONFIG Reg.
-	INA219_PAR_R_100MOHM,       // 100 milli-ohm
-	INA219_PAR_V_16V,           // 16V max
-	INA219_PAR_G_40MV,          // Gain x1 (40mV -> 400mA max with 100 milliOhm)
-	INA219_PAR_B_12B_X1_532US,  // Bus/resolution 12bit & one time convertion
-	INA219_PAR_S_12B_X1_532US,  // Shunt/resolution 12bit & one time convertion
-	INA219_PAR_M_SHNTBUS_CONT,  // Measure continuously both Shunt voltage and Bus voltage
-	// CALIB
-	(uint16_t)16384                     // Calibration data is nothing
-};
 
 struct sensor_data		// Struct dynamisch anpassen je nach Platinenversion
 {
@@ -125,15 +111,13 @@ void imu_task()
 	}
 }
 
-// Funktion zum Auslesen der Sensordaten
+/*
+ *Thread zum Auslesen der Sensordaten
+ */
 void sensor_thread() {
-	uint8_t ret;
-	static int32_t temp = 0;
-
+	int32_t temp = 0;
 	while (true)
     {
-
-
 		pressure_sensor1.write_command_adc_read(TEMPERATURE, &temp);
 		tx_data.sensor1 = pressure_sensor1.calculate_pressure(temp);
 
@@ -154,7 +138,7 @@ void sensor_thread() {
     	pressure_sensor6.start_conv_temp();
     	pressure_sensor7.start_conv_temp();
 
-		rtos::ThisThread::sleep_for(10);
+		rtos::ThisThread::sleep_for(20);
 
 		pressure_sensor1.write_command_adc_read(PRESSURE, &temp);
 		tx_data.temp1 = pressure_sensor1.calculate_temperature(temp);
@@ -188,19 +172,12 @@ void sensor_thread() {
 	    usb_serial.printf("p1: %.2f\t t1: %.2f\tp2: %.2f\tt2: %.2f\tp3: %.2f\tt3: %.2f\tp4: %.2f\tt4: %.2f\tp5: %.2f\tt5: %.2f\tp6: %.2f\tt6: %.2f\tp7: %.2f\tt7: %.2f\n\r", tx_data.sensor1, tx_data.temp1, tx_data.sensor2, tx_data.temp2, tx_data.sensor3, tx_data.temp3, tx_data.sensor4, tx_data.temp4, tx_data.sensor5, tx_data.temp5, tx_data.sensor6, tx_data.temp6, tx_data.sensor7, tx_data.temp7);
 #endif
 	    event_flags.set(FLAG_CONVERSATION_SENSORS);
-	    rtos::ThisThread::sleep_for(10);
-
-//		float p1 = pressure_sensor1.getPressure();
-//		float t1 = pressure_sensor1.getTemperature();
-//		float p2 = pressure_sensor2.getPressure();
-//		float t2 = pressure_sensor2.getTemperature();
-//		float p3 = pressure_sensor3.getPressure();
-//		float t3 = pressure_sensor3.getTemperature();
-//		usb_serial.printf("p1: %.2f\t t1: %.2f\t p2: %.2f\t t2: %.2f\t p3: %.2f\t t3: %.2f\n\r", p1, t1, p2, t2, p3, t3);
-//		rtos::ThisThread::sleep_for(30);
+	    rtos::ThisThread::sleep_for(20);
     }
 }
-
+/*
+* Thread zum Senden der Daten via Ethernet
+*/
 
 void ethernet_thread(Net_com* net_com) {
 
@@ -229,8 +206,8 @@ void ethernet_thread(Net_com* net_com) {
     }
 }
 
-/**
- *
+/*
+ *  Callback fuer Diagnose via Ethernet
  */
 void net_receive_callback(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, u16_t port)
 {
@@ -292,7 +269,9 @@ void net_receive_callback(void *arg, struct udp_pcb *pcb, struct pbuf *p, const 
 	pbuf_free(p);
 }
 
-
+/*
+* main function, Initialisierung der Sensoren, Threads und Ethernet interface
+*/
 
 int main()
 {
@@ -324,7 +303,6 @@ int main()
 	Thread  	thread1;
 	Thread 		thread2;
 	Thread 		thread3;
-	//INA219		current_sensor(PF_0, PF_1, &ina219_data);
 
 	// Einstellung unterschiedlicher Modi entsprechend Datenblatt
 	pressure_sensor1.init(N_DR_90_SPS,NORMAL_MODE);
@@ -334,7 +312,6 @@ int main()
 	pressure_sensor5.init(N_DR_90_SPS,NORMAL_MODE);
 	pressure_sensor6.init();
 	pressure_sensor7.init();
-//    usb_serial.printf("\n\n*** Sensorbox ***\r\n");
 
     thread1.start(sensor_thread);				// Sensor thread aktivieren -> Ließt Daten aus Sensoren aus
     thread2.start(callback(ethernet_thread, &net_com));	// Ethernet thread aktivieren -> Aktiviert Datenbübertragung via Ethernet
