@@ -1,0 +1,35 @@
+add_library(ICM_20948 INTERFACE)
+
+target_include_directories(ICM_20948
+    INTERFACE
+        .
+	${CMAKE_CURRENT_SOURCE_DIR}/HAL
+	${CMAKE_CURRENT_SOURCE_DIR}/HAL/tm4c1294
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Drivers/ICM20948
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/DynamicProtocol
+	${CMAKE_CURRENT_SOURCE_DIR}/libs
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/VSensor
+)
+
+target_sources(ICM_20948
+    	INTERFACE
+	${CMAKE_CURRENT_SOURCE_DIR}/icm20948_dmp.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/HAL/tm4c1294/hal_icm_spi_tm4c.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Sensor.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Drivers/ICM20948/Icm20948Augmented.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Drivers/ICM20948/Icm20948AuxCompassAkm.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Drivers/ICM20948/Icm20948AuxTransport.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Drivers/ICM20948/Icm20948DataBaseControl.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Drivers/ICM20948/Icm20948DataBaseDriver.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Drivers/ICM20948/Icm20948DataConverter.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Drivers/ICM20948/Icm20948Dmp3Driver.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Drivers/ICM20948/Icm20948LoadFirmware.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Drivers/ICM20948/Icm20948MPUFifoControl.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Drivers/ICM20948/Icm20948SelfTest.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Drivers/ICM20948/Icm20948Setup.c
+	${CMAKE_CURRENT_SOURCE_DIR}/Invn/Devices/Drivers/ICM20948/Icm20948Transport.c
+	#${CMAKE_CURRENT_SOURCE_DIR}/Invn/DynamicProtocol/DynProtocol.c
+)
+

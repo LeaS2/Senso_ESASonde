@@ -1,0 +1,38 @@
+{ 
+    "SENSORBOARD": {
+        "inherits": [
+            "MCU_STM32F7"
+        ],
+        "extra_labels_add": [
+            "STM32F746xG",
+            "STM32F746ZG"
+        ],
+        "config": {
+            "d11_configuration": {
+                "help": "Value: PA_7 for the default board configuration, PB_5 in case of solder bridge update (SB121 off/ SB122 on)",
+                "value": "PA_7",
+                "macro_name": "STM32_D11_SPI_ETHERNET_PIN"
+            }
+        },
+        "macros_add": [
+            "STM32F746xx",
+            "HSE_VALUE=8000000UL"
+        ],
+        "macros_remove":
+        [
+          "MBED_TICKLESS"
+        ],
+        "detect_code": [
+            "0816"
+        ],
+        "device_has_add": [
+            "EMAC",
+            "USBDEVICE"
+        ],
+        "device_name": "STM32F746ZGTx",
+        "overrides": {
+            "clock_source": "USE_PLL_HSE_EXTC",
+            "network-default-interface-type": "ETHERNET"
+        }   
+    }
+}
