@@ -7,7 +7,7 @@
 #include 	"HTU21D.h"
 #include    "Honeywell_RSC.h"
 #include    "icm20948_dmp.h"
-
+#include    <cstring>
 
 #define IP_ADDRESS         "192.168.000.003"
 #define NETMASK_ADDRESS    "192.168.000.001"
@@ -45,7 +45,7 @@ MS5611_01BA03 pressure_sensor6(&spi6, PD_4);
 MS5611_01BA03 pressure_sensor7(&spi5, PF_10);
 ICM20948_DMP imu(&spi1, PF_6);
 
-
+Mutex data_mutex;
 InterruptIn isr_imu(PA_4);
 bool imu_isr_ready = false;
 
@@ -118,6 +118,8 @@ void sensor_thread() {
 	int32_t temp = 0;
 	while (true)
     {
+		//txdata Zugriff sichern mit Mutex
+		data_mutex.lock();
 		pressure_sensor1.write_command_adc_read(TEMPERATURE, &temp);
 		tx_data.sensor1 = pressure_sensor1.calculate_pressure(temp);
 
@@ -138,8 +140,11 @@ void sensor_thread() {
     	pressure_sensor6.start_conv_temp();
     	pressure_sensor7.start_conv_temp();
 
-		rtos::ThisThread::sleep_for(20);			// !!! auf 50 für 20 SPS
+    	data_mutex.unlock();
 
+    	rtos::ThisThread::sleep_for(20);			// !!! auf 50 für 20 SPS
+
+		data_mutex.lock();
 		pressure_sensor1.write_command_adc_read(PRESSURE, &temp);
 		tx_data.temp1 = pressure_sensor1.calculate_temperature(temp);
 
@@ -168,6 +173,8 @@ void sensor_thread() {
 		tx_data.sensor7 = pressure_sensor7.getPressure();
 		tx_data.temp7 = pressure_sensor7.getTemperature();
 
+		//txdata wieder freigeben
+		data_mutex.unlock();
 #if (USB_SERIAL == 1)
 	    usb_serial.printf("p1: %.2f\t t1: %.2f\tp2: %.2f\tt2: %.2f\tp3: %.2f\tt3: %.2f\tp4: %.2f\tt4: %.2f\tp5: %.2f\tt5: %.2f\tp6: %.2f\tt6: %.2f\tp7: %.2f\tt7: %.2f\n\r", tx_data.sensor1, tx_data.temp1, tx_data.sensor2, tx_data.temp2, tx_data.sensor3, tx_data.temp3, tx_data.sensor4, tx_data.temp4, tx_data.sensor5, tx_data.temp5, tx_data.sensor6, tx_data.temp6, tx_data.sensor7, tx_data.temp7);
 #endif
@@ -183,10 +190,11 @@ void ethernet_thread(Net_com* net_com) {
 
 	static uint32_t packages = 0;
 	tx_data.id = 0x01;
+	struct sensor_data tx_data_temp;
 	while (true)
     {
 		event_flags.wait_any(FLAG_CONVERSATION_SENSORS);		// Funktion wartet bis alle Sensordaten ausgelesen sind
-		tx_data.timestamp = us_ticker_read() / 1000u;
+
 		/*if (imu.gyroDataIsReady())
 		{
 		    imu.readGyroData(&tx_data.gx, &tx_data.gy, &tx_data.gz);
@@ -201,8 +209,14 @@ void ethernet_thread(Net_com* net_com) {
 		{
 			imu.readQuatData(&tx_data.quat_w, &tx_data.quat_x, &tx_data.quat_y, &tx_data.quat_z);
 		}*/
+
+		data_mutex.lock();
+	    tx_data.timestamp = us_ticker_read() / 1000u;
 		tx_data.counter = packages++;
-		net_com->net_com_sendto(&tx_data, sizeof(tx_data));	// erst dann werden Daten verschickt
+		std::memcpy(&tx_data_temp, &tx_data, sizeof(tx_data));
+		data_mutex.unlock();
+
+		net_com->net_com_sendto(&tx_data_temp, sizeof(tx_data_temp));	// erst dann werden Daten verschickt
     }
 }
 
