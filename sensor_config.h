@@ -14,7 +14,7 @@ struct sensor_config
 {
 	uint8_t datarate;
 	uint8_t mode;
-	uint8_t frequency;
+	uint8_t delay;
 };
 
 

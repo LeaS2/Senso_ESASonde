@@ -47,7 +47,7 @@ MS5611_01BA03 pressure_sensor6(&spi6, PD_4);
 MS5611_01BA03 pressure_sensor7(&spi5, PF_10);
 ICM20948_DMP imu(&spi1, PF_6);
 
-Mutex data_mutex;
+
 InterruptIn isr_imu(PA_4);
 bool imu_isr_ready = false;
 
@@ -75,7 +75,7 @@ struct data_frame		// Struct dynamisch anpassen je nach Platinenversion
 
 struct data_frame sensor_data;
 struct data_frame ethernet_data;
-struct data_frame tx_data;
+struct data_frame exchange_data;
 
 Thread  	thread1;
 Thread 		thread2;
@@ -186,12 +186,8 @@ void sensor_thread() {
 
 	    event_flags.wait_any(FLAG_CONVERSATION_ETHERNET);
 
-
-	    //Zugriff auf Sendebuffer sichern mit Mutex
-		data_mutex.lock();
-	    std::memcpy(&tx_data, &sensor_data, sizeof(struct data_frame));
-		//Zugriff wieder freigeben
-		data_mutex.unlock();
+        //copy sensor values in exchange buffer
+	    std::memcpy(&exchange_data, &sensor_data, sizeof(struct data_frame));
 
 	    event_flags.set(FLAG_CONVERSATION_SENSORS);
 
@@ -227,19 +223,15 @@ void ethernet_thread(Net_com* net_com) {
 		{
 			imu.readQuatData(&tx_data.quat_w, &tx_data.quat_x, &tx_data.quat_y, &tx_data.quat_z);
 		}*/
-
-
-		ethernet_data.timestamp = us_ticker_read() / 1000u;
-		ethernet_data.counter = packages++;
-
-
 		event_flags.wait_any(FLAG_CONVERSATION_SENSORS);		// Funktion wartet bis alle Sensordaten ausgelesen sind
-		data_mutex.lock();
-		std::memcpy(&tx_data, &ethernet_data,  sizeof(struct data_frame));
-		data_mutex.unlock();
 
-		net_com->net_com_sendto(&tx_data,  sizeof(struct data_frame));	// erst dann werden Daten verschickt
+		exchange_data.timestamp = us_ticker_read() / 1000u;
+		exchange_data.counter = packages++;
+		std::memcpy(&ethernet_data, &exchange_data,  sizeof(struct data_frame));
 		event_flags.set(FLAG_CONVERSATION_ETHERNET);
+
+		net_com->net_com_sendto(&ethernet_data,  sizeof(struct data_frame));	// erst dann werden Daten verschickt
+
     }
 }
 
@@ -308,8 +300,8 @@ void net_receive_callback(void *arg, struct udp_pcb *pcb, struct pbuf *p, const 
 			pressure_sensor4.set_mode((RSC_MODE)sensor_thread_config.mode);
 			pressure_sensor5.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
 			pressure_sensor5.set_mode((RSC_MODE)sensor_thread_config.mode);
-			sensor_thread_delay1 = sensor_thread_config.frequency;
-			sensor_thread_delay1 = sensor_thread_config.frequency;
+			sensor_thread_delay1 = sensor_thread_config.delay;
+			sensor_thread_delay1 = sensor_thread_config.delay;
 		break;
 
 
@@ -368,11 +360,14 @@ int main()
 	pressure_sensor6.init();
 	pressure_sensor7.init();
 
-	//Set default values;
+	//Set default values
 	sensor_thread_delay1 = 20;
 	sensor_thread_delay1 = 20;
 
-    thread1.start(sensor_thread);				// Sensor thread aktivieren -> Ließt Daten aus Sensoren aus
+	//set start event
+	event_flags.set(FLAG_CONVERSATION_ETHERNET);
+
+    thread1.start(sensor_thread);				// Sensor thread aktivieren -> liest Daten aus Sensoren aus
     thread2.start(callback(ethernet_thread, &net_com));	// Ethernet thread aktivieren -> Aktiviert Datenbübertragung via Ethernet
 //    thread3.start(imu_task);
 //    thread3.start(diag_thread);
