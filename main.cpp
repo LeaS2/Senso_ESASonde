@@ -8,6 +8,7 @@
 #include    "Honeywell_RSC.h"
 #include    "icm20948_dmp.h"
 #include    <cstring>
+#include    "sensor_config.h"
 
 #define IP_ADDRESS         "192.168.000.003"
 #define NETMASK_ADDRESS    "192.168.000.001"
@@ -76,6 +77,13 @@ struct data_frame sensor_data;
 struct data_frame ethernet_data;
 struct data_frame tx_data;
 
+Thread  	thread1;
+Thread 		thread2;
+Thread 		thread3;
+
+uint8_t sensor_thread_delay1;
+uint8_t sensor_thread_delay2;
+
 struct diag_data
 {
 	uint8_t id;
@@ -142,7 +150,7 @@ void sensor_thread() {
     	pressure_sensor6.start_conv_temp();
     	pressure_sensor7.start_conv_temp();
 
-    	rtos::ThisThread::sleep_for(20);			// !!! auf 50 für 20 SPS
+    	rtos::ThisThread::sleep_for(sensor_thread_delay1);			// !!! auf 50 für 20 SPS
 
 		pressure_sensor1.write_command_adc_read(PRESSURE, &temp);
 		sensor_data.temp1 = pressure_sensor1.calculate_temperature(temp);
@@ -187,7 +195,7 @@ void sensor_thread() {
 
 	    event_flags.set(FLAG_CONVERSATION_SENSORS);
 
-	    rtos::ThisThread::sleep_for(20);						// !!! auf 50 für 20 SPS
+	    rtos::ThisThread::sleep_for(sensor_thread_delay2);						// !!! auf 50 für 20 SPS
 
 
     }
@@ -241,6 +249,7 @@ void ethernet_thread(Net_com* net_com) {
 void net_receive_callback(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, u16_t port)
 {
 	struct diag_data* recv_diag = (struct diag_data*)(p->payload);
+	struct sensor_config sensor_thread_config;
 
 	switch(recv_diag->id)
 	{
@@ -270,17 +279,37 @@ void net_receive_callback(void *arg, struct udp_pcb *pcb, struct pbuf *p, const 
 		//start sending sensor data
 		case 0x60:
 			recv_diag->id = recv_diag->id + 0x20;
-
+			thread1.start(sensor_thread);
+			thread2.start(sensor_thread);
 		break;
 
 		//stop sending sensor data
 		case 0x70:
 			recv_diag->id = recv_diag->id + 0x20;
-
+			thread1.terminate();
+			thread2.terminate();
 		break;
 		//get error informations
 		case 0x80:
 			recv_diag->id = recv_diag->id + 0x20;
+		break;
+
+		//set the config parameter for sensor thread
+		case 0x90:
+			recv_diag->id = recv_diag->id + 0x20;
+			std::memcpy(&sensor_thread_config, recv_diag->data, sizeof(struct sensor_config));
+			pressure_sensor1.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
+			pressure_sensor1.set_mode((RSC_MODE)sensor_thread_config.mode);
+			pressure_sensor2.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
+			pressure_sensor2.set_mode((RSC_MODE)sensor_thread_config.mode);
+			pressure_sensor3.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
+			pressure_sensor3.set_mode((RSC_MODE)sensor_thread_config.mode);
+			pressure_sensor4.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
+			pressure_sensor4.set_mode((RSC_MODE)sensor_thread_config.mode);
+			pressure_sensor5.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
+			pressure_sensor5.set_mode((RSC_MODE)sensor_thread_config.mode);
+			sensor_thread_delay1 = sensor_thread_config.frequency;
+			sensor_thread_delay1 = sensor_thread_config.frequency;
 		break;
 
 
@@ -329,9 +358,6 @@ int main()
 	// Net_com 	diag_com(IP_ADDRESS_SOCKET, DIAG_PORT, upcb, net_receive_callback);
 	// diag_com.net_com_bind();
 
-	Thread  	thread1;
-	Thread 		thread2;
-	Thread 		thread3;
 
 	// Einstellung unterschiedlicher Modi entsprechend Datenblatt
 	pressure_sensor1.init(N_DR_90_SPS,NORMAL_MODE);
@@ -341,6 +367,10 @@ int main()
 	pressure_sensor5.init(N_DR_90_SPS,NORMAL_MODE);
 	pressure_sensor6.init();
 	pressure_sensor7.init();
+
+	//Set default values;
+	sensor_thread_delay1 = 20;
+	sensor_thread_delay1 = 20;
 
     thread1.start(sensor_thread);				// Sensor thread aktivieren -> Ließt Daten aus Sensoren aus
     thread2.start(callback(ethernet_thread, &net_com));	// Ethernet thread aktivieren -> Aktiviert Datenbübertragung via Ethernet
