@@ -16,6 +16,7 @@
 #define ECHO_SERVER_PORT   	7
 #define DIAG_PORT   		8
 #define FLAG_CONVERSATION_SENSORS                 1
+#define FLAG_CONVERSATION_ETHERNET                2
 #define FLAG_DIAG           2
 #define BOARD_ID			0x03
 #define USB_SERIAL			0
@@ -50,7 +51,7 @@ InterruptIn isr_imu(PA_4);
 bool imu_isr_ready = false;
 
 
-struct sensor_data		// Struct dynamisch anpassen je nach Platinenversion
+struct data_frame		// Struct dynamisch anpassen je nach Platinenversion
 {
 	uint32_t counter;
 	uint8_t id;
@@ -71,7 +72,9 @@ struct sensor_data		// Struct dynamisch anpassen je nach Platinenversion
 	int32_t temp7;
 };
 
-struct sensor_data tx_data;
+struct data_frame sensor_data;
+struct data_frame ethernet_data;
+struct data_frame tx_data;
 
 struct diag_data
 {
@@ -118,47 +121,43 @@ void sensor_thread() {
 	int32_t temp = 0;
 	while (true)
     {
-		//txdata Zugriff sichern mit Mutex
-		data_mutex.lock();
+
 		pressure_sensor1.write_command_adc_read(TEMPERATURE, &temp);
-		tx_data.sensor1 = pressure_sensor1.calculate_pressure(temp);
+		sensor_data.sensor1 = pressure_sensor1.calculate_pressure(temp);
 
 		pressure_sensor2.write_command_adc_read(TEMPERATURE, &temp);
-		tx_data.sensor2 = pressure_sensor2.calculate_pressure(temp);
+		sensor_data.sensor2 = pressure_sensor2.calculate_pressure(temp);
 
 		pressure_sensor3.write_command_adc_read(TEMPERATURE, &temp);
-		tx_data.sensor3 = pressure_sensor3.calculate_pressure(temp);
+		sensor_data.sensor3 = pressure_sensor3.calculate_pressure(temp);
 
 		pressure_sensor4.write_command_adc_read(TEMPERATURE, &temp);
-		tx_data.sensor4 = pressure_sensor4.calculate_pressure(temp);
+		sensor_data.sensor4 = pressure_sensor4.calculate_pressure(temp);
 
 		pressure_sensor5.write_command_adc_read(TEMPERATURE, &temp);
-		tx_data.sensor5 = pressure_sensor5.calculate_pressure(temp);
+		sensor_data.sensor5 = pressure_sensor5.calculate_pressure(temp);
 
 		pressure_sensor6.read_conv_press();
 		pressure_sensor7.read_conv_press();
     	pressure_sensor6.start_conv_temp();
     	pressure_sensor7.start_conv_temp();
 
-    	data_mutex.unlock();
-
     	rtos::ThisThread::sleep_for(20);			// !!! auf 50 für 20 SPS
 
-		data_mutex.lock();
 		pressure_sensor1.write_command_adc_read(PRESSURE, &temp);
-		tx_data.temp1 = pressure_sensor1.calculate_temperature(temp);
+		sensor_data.temp1 = pressure_sensor1.calculate_temperature(temp);
 
 		pressure_sensor2.write_command_adc_read(PRESSURE, &temp);
-		tx_data.temp2 = pressure_sensor2.calculate_temperature(temp);
+		sensor_data.temp2 = pressure_sensor2.calculate_temperature(temp);
 
 		pressure_sensor3.write_command_adc_read(PRESSURE, &temp);
-		tx_data.temp3 = pressure_sensor3.calculate_temperature(temp);
+		sensor_data.temp3 = pressure_sensor3.calculate_temperature(temp);
 
 		pressure_sensor4.write_command_adc_read(PRESSURE, &temp);
-		tx_data.temp4 = pressure_sensor4.calculate_temperature(temp);
+		sensor_data.temp4 = pressure_sensor4.calculate_temperature(temp);
 
 		pressure_sensor5.write_command_adc_read(PRESSURE, &temp);
-		tx_data.temp5 = pressure_sensor5.calculate_temperature(temp);
+		sensor_data.temp5 = pressure_sensor5.calculate_temperature(temp);
 
 		pressure_sensor6.read_conv_temp();
 		pressure_sensor7.read_conv_temp();
@@ -167,19 +166,30 @@ void sensor_thread() {
 		pressure_sensor6.calculate();
 		pressure_sensor7.calculate();
 
-		tx_data.sensor6 = pressure_sensor6.getPressure();
-		tx_data.temp6 = pressure_sensor6.getTemperature();
+		sensor_data.sensor6 = pressure_sensor6.getPressure();
+		sensor_data.temp6 = pressure_sensor6.getTemperature();
 
-		tx_data.sensor7 = pressure_sensor7.getPressure();
-		tx_data.temp7 = pressure_sensor7.getTemperature();
+		sensor_data.sensor7 = pressure_sensor7.getPressure();
+		sensor_data.temp7 = pressure_sensor7.getTemperature();
 
-		//txdata wieder freigeben
-		data_mutex.unlock();
 #if (USB_SERIAL == 1)
 	    usb_serial.printf("p1: %.2f\t t1: %.2f\tp2: %.2f\tt2: %.2f\tp3: %.2f\tt3: %.2f\tp4: %.2f\tt4: %.2f\tp5: %.2f\tt5: %.2f\tp6: %.2f\tt6: %.2f\tp7: %.2f\tt7: %.2f\n\r", tx_data.sensor1, tx_data.temp1, tx_data.sensor2, tx_data.temp2, tx_data.sensor3, tx_data.temp3, tx_data.sensor4, tx_data.temp4, tx_data.sensor5, tx_data.temp5, tx_data.sensor6, tx_data.temp6, tx_data.sensor7, tx_data.temp7);
 #endif
+
+	    event_flags.wait_any(FLAG_CONVERSATION_ETHERNET);
+
+
+	    //Zugriff auf Sendebuffer sichern mit Mutex
+		data_mutex.lock();
+	    std::memcpy(&tx_data, &sensor_data, sizeof(struct data_frame));
+		//Zugriff wieder freigeben
+		data_mutex.unlock();
+
 	    event_flags.set(FLAG_CONVERSATION_SENSORS);
+
 	    rtos::ThisThread::sleep_for(20);						// !!! auf 50 für 20 SPS
+
+
     }
 }
 /*
@@ -189,11 +199,11 @@ void sensor_thread() {
 void ethernet_thread(Net_com* net_com) {
 
 	static uint32_t packages = 0;
-	tx_data.id = 0x01;
-	struct sensor_data tx_data_temp;
+	ethernet_data.id = 0x01;
+
 	while (true)
     {
-		event_flags.wait_any(FLAG_CONVERSATION_SENSORS);		// Funktion wartet bis alle Sensordaten ausgelesen sind
+
 
 		/*if (imu.gyroDataIsReady())
 		{
@@ -210,13 +220,18 @@ void ethernet_thread(Net_com* net_com) {
 			imu.readQuatData(&tx_data.quat_w, &tx_data.quat_x, &tx_data.quat_y, &tx_data.quat_z);
 		}*/
 
+
+		ethernet_data.timestamp = us_ticker_read() / 1000u;
+		ethernet_data.counter = packages++;
+
+
+		event_flags.wait_any(FLAG_CONVERSATION_SENSORS);		// Funktion wartet bis alle Sensordaten ausgelesen sind
 		data_mutex.lock();
-	    tx_data.timestamp = us_ticker_read() / 1000u;
-		tx_data.counter = packages++;
-		std::memcpy(&tx_data_temp, &tx_data, sizeof(tx_data));
+		std::memcpy(&tx_data, &ethernet_data,  sizeof(struct data_frame));
 		data_mutex.unlock();
 
-		net_com->net_com_sendto(&tx_data_temp, sizeof(tx_data_temp));	// erst dann werden Daten verschickt
+		net_com->net_com_sendto(&tx_data,  sizeof(struct data_frame));	// erst dann werden Daten verschickt
+		event_flags.set(FLAG_CONVERSATION_ETHERNET);
     }
 }
 
