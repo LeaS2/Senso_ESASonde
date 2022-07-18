@@ -9,6 +9,8 @@
 #include    "icm20948_dmp.h"
 #include    <cstring>
 #include    "sensor_config.h"
+#include    "diag_sensorboard.h"
+
 
 #define IP_ADDRESS         "192.168.000.003"
 #define NETMASK_ADDRESS    "192.168.000.001"
@@ -79,12 +81,6 @@ Thread 		thread3;
 
 uint8_t sensor_thread_delay1;
 uint8_t sensor_thread_delay2;
-
-struct diag_data
-{
-	uint8_t id;
-	uint8_t data[8];
-};
 
 
 
@@ -194,15 +190,15 @@ void net_receive_callback(void *arg, struct udp_pcb *pcb, struct pbuf *p, const 
 	switch(recv_diag->id)
 	{
 		//get Session
-		case 0x30:
+		case GET_SESSION:
 			//usb_serial.printf("get session\n\r");
-			recv_diag->id = recv_diag->id + 0x20;
+			recv_diag->id = recv_diag->id + CONTROL_WORD;
 			recv_diag->data[0] = 0x02;
 
 		break;
 
 		//start Bootloader
-		case 0x40:
+		case START_BOOTLOADER:
 			//usb_serial.printf("starting Bootloader\n\r");
 			SCB->VTOR = (FLASH_BASE);
 			JumpAddress = *(__IO uint32_t*) (FLASH_BASE);
@@ -211,47 +207,47 @@ void net_receive_callback(void *arg, struct udp_pcb *pcb, struct pbuf *p, const 
 		break;
 
 		//get board ID
-		case 0x50:
-			recv_diag->id = recv_diag->id + 0x20;
+		case GET_BOARD_ID:
+			recv_diag->id = recv_diag->id + CONTROL_WORD;
 			recv_diag->data[0] = BOARD_ID;
 		break;
 
 		//start sending sensor data
-		case 0x60:
-			recv_diag->id = recv_diag->id + 0x20;
+		case START_SENDING_SENSOR_DATA:
+			recv_diag->id = recv_diag->id + CONTROL_WORD;
 			thread1.start(sensor_thread);
 			thread2.start(sensor_thread);
 		break;
 
 		//stop sending sensor data
-		case 0x70:
-			recv_diag->id = recv_diag->id + 0x20;
+		case STOP_SENDING_SENSOR_DATA:
+			recv_diag->id = recv_diag->id + CONTROL_WORD;
 			thread1.terminate();
 			thread2.terminate();
 		break;
 		//get error informations
-		case 0x80:
-			recv_diag->id = recv_diag->id + 0x20;
+		case GET_ERROR_INFORMATION:
+			recv_diag->id = recv_diag->id + CONTROL_WORD;
 		break;
 
 		//set the config parameter for sensor thread
-		case 0x90:
-			recv_diag->id = recv_diag->id + 0x20;
+		case SET_SENSOR_CONFIG:
+			recv_diag->id = recv_diag->id + CONTROL_WORD;
 			std::memcpy(&sensor_thread_config, recv_diag->data, sizeof(struct sensor_config));
 
 			thread1.terminate();
 			thread2.terminate();
 
-			pressure_sensor1.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
-			pressure_sensor1.set_mode((RSC_MODE)sensor_thread_config.mode);
-			pressure_sensor2.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
-			pressure_sensor2.set_mode((RSC_MODE)sensor_thread_config.mode);
-			pressure_sensor3.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
-			pressure_sensor3.set_mode((RSC_MODE)sensor_thread_config.mode);
-			pressure_sensor4.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
-			pressure_sensor4.set_mode((RSC_MODE)sensor_thread_config.mode);
-			pressure_sensor5.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
-			pressure_sensor5.set_mode((RSC_MODE)sensor_thread_config.mode);
+			pressure_sensor1.set_data_rate(sensor_thread_config.datarate);
+			pressure_sensor1.set_mode(sensor_thread_config.mode);
+			pressure_sensor2.set_data_rate(sensor_thread_config.datarate);
+			pressure_sensor2.set_mode(sensor_thread_config.mode);
+			pressure_sensor3.set_data_rate(sensor_thread_config.datarate);
+			pressure_sensor3.set_mode(sensor_thread_config.mode);
+			pressure_sensor4.set_data_rate(sensor_thread_config.datarate);
+			pressure_sensor4.set_mode(sensor_thread_config.mode);
+			pressure_sensor5.set_data_rate(sensor_thread_config.datarate);
+			pressure_sensor5.set_mode(sensor_thread_config.mode);
 			sensor_thread_delay1 = sensor_thread_config.delay;
 			sensor_thread_delay2 = sensor_thread_config.delay;
 

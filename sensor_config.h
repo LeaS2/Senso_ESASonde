@@ -12,8 +12,8 @@
  */
 struct sensor_config
 {
-	uint8_t datarate;
-	uint8_t mode;
+	RSC_DATA_RATE datarate;
+	RSC_MODE mode;
 	uint8_t delay;
 };
 
