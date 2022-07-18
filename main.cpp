@@ -45,11 +45,7 @@ Honeywell_RSC pressure_sensor4(&spi2, PC_0, PG_5);
 Honeywell_RSC pressure_sensor5(&spi2, PA_3, PG_6);
 MS5611_01BA03 pressure_sensor6(&spi6, PD_4);
 MS5611_01BA03 pressure_sensor7(&spi5, PF_10);
-ICM20948_DMP imu(&spi1, PF_6);
 
-
-InterruptIn isr_imu(PA_4);
-bool imu_isr_ready = false;
 
 
 struct data_frame		// Struct dynamisch anpassen je nach Platinenversion
@@ -90,43 +86,14 @@ struct diag_data
 	uint8_t data[8];
 };
 
-void exti_imu()
-{
-	imu_isr_ready = true;
-}
 
-void imu_task()
-{
-	float gyro_x, gyro_y, gyro_z;
-	float accel_x, accel_y, accel_z;
-	float mag_x, mag_y, mag_z;
-	float quat_w, quat_x, quat_y, quat_z;
-	char sensor_string_buff[128];
-	while(true)
-	{
-		// Must call this often in main loop -- updates the sensor values
-		imu.task();
-		if (imu.gyroDataIsReady())
-		{
-			imu.readGyroData(&gyro_x, &gyro_y, &gyro_z);
-#if (USB_SERIAL == 1)
-			usb_serial.printf("%.2f,%.2f,%.2f\r\n", gyro_x, gyro_y, gyro_z);
-#endif
-		}
-		if (imu.quatDataIsReady())
-		{
-			imu.readQuatData(&quat_w, &quat_x, &quat_y, &quat_z);
-//			usb_serial.printf("{\"quat_w\":%f, \"quat_x\":%f, \"quat_y\":%f, \"quat_z\":%f}\n\r", quat_w, quat_x, quat_y, quat_z);
-		}
-		//rtos::ThisThread::sleep_for(50);
-	}
-}
 
 /*
  *Thread zum Auslesen der Sensordaten
  */
 void sensor_thread() {
 	int32_t temp = 0;
+	sensor_data.id = 0x01;
 	while (true)
     {
 
@@ -192,8 +159,6 @@ void sensor_thread() {
 	    event_flags.set(FLAG_CONVERSATION_SENSORS);
 
 	    rtos::ThisThread::sleep_for(sensor_thread_delay2);						// !!! auf 50 für 20 SPS
-
-
     }
 }
 /*
@@ -203,26 +168,9 @@ void sensor_thread() {
 void ethernet_thread(Net_com* net_com) {
 
 	static uint32_t packages = 0;
-	ethernet_data.id = 0x01;
 
 	while (true)
     {
-
-
-		/*if (imu.gyroDataIsReady())
-		{
-		    imu.readGyroData(&tx_data.gx, &tx_data.gy, &tx_data.gz);
-		}
-
-		if (imu.accelDataIsReady())
-		{
-			imu.readAccelData(&tx_data.ax, &tx_data.ay, &tx_data.az);
-		}
-
-		if (imu.quatDataIsReady())
-		{
-			imu.readQuatData(&tx_data.quat_w, &tx_data.quat_x, &tx_data.quat_y, &tx_data.quat_z);
-		}*/
 		event_flags.wait_any(FLAG_CONVERSATION_SENSORS);		// Funktion wartet bis alle Sensordaten ausgelesen sind
 
 		exchange_data.timestamp = us_ticker_read() / 1000u;
@@ -236,7 +184,7 @@ void ethernet_thread(Net_com* net_com) {
 }
 
 /*
- *  Callback fuer Diagnose via Ethernet
+ *  Callback for diagnostic via Ethernet
  */
 void net_receive_callback(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, u16_t port)
 {
@@ -290,6 +238,10 @@ void net_receive_callback(void *arg, struct udp_pcb *pcb, struct pbuf *p, const 
 		case 0x90:
 			recv_diag->id = recv_diag->id + 0x20;
 			std::memcpy(&sensor_thread_config, recv_diag->data, sizeof(struct sensor_config));
+
+			thread1.terminate();
+			thread2.terminate();
+
 			pressure_sensor1.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
 			pressure_sensor1.set_mode((RSC_MODE)sensor_thread_config.mode);
 			pressure_sensor2.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
@@ -301,7 +253,11 @@ void net_receive_callback(void *arg, struct udp_pcb *pcb, struct pbuf *p, const 
 			pressure_sensor5.set_data_rate((RSC_DATA_RATE)sensor_thread_config.datarate);
 			pressure_sensor5.set_mode((RSC_MODE)sensor_thread_config.mode);
 			sensor_thread_delay1 = sensor_thread_config.delay;
-			sensor_thread_delay1 = sensor_thread_config.delay;
+			sensor_thread_delay2 = sensor_thread_config.delay;
+
+			thread1.start(sensor_thread);
+			thread2.start(sensor_thread);
+
 		break;
 
 
@@ -328,20 +284,8 @@ int main()
 
 	eth.set_network(IP_ADDRESS,NETMASK_ADDRESS,GATEWAY_ADDRESS);
 	eth.connect();
-#if (USB_SERIAL == 1)
-//	icm20948_set_serial(&usb_serial);
-#endif
-//	imu_settings.mode = 1;
-//	imu_settings.enable_accelerometer = true;
-//	imu_settings.enable_gyroscope = true;
-//	imu_settings.enable_quaternion = true;
-//	imu_settings.spi_speed = 1200000UL;
-//	imu_settings.gyroscope_frequency = 50u;      // Max frequency = 225, min frequency = 1
-//	imu_settings.accelerometer_frequency = 50u;  // Max frequency = 225, min frequency = 1
-//	imu_settings.magnetometer_frequency = 50u;   // Max frequency = 70, min frequency = 1
-//	imu_settings.quaternion_frequency = 225u;     // Max frequency = 225, min frequency = 50
-//	imu.init(imu_settings);
-//	usb_serial.printf("init imu\r\n");
+
+
 	struct udp_pcb * upcb = udp_new();
 	Net_com 	net_com(IP_ADDRESS_SOCKET, ECHO_SERVER_PORT, upcb, NULL);
 	net_com.net_com_bind();
@@ -362,7 +306,7 @@ int main()
 
 	//Set default values
 	sensor_thread_delay1 = 20;
-	sensor_thread_delay1 = 20;
+	sensor_thread_delay2 = 20;
 
 	//set start event
 	event_flags.set(FLAG_CONVERSATION_ETHERNET);
