@@ -142,7 +142,8 @@ void sensor_thread() {
 
     	data_mutex.unlock();
 
-    	rtos::ThisThread::sleep_for(20);			// !!! auf 50 für 20 SPS
+		// sleep in ms
+    	rtos::ThisThread::sleep_for(20);			// entspricht 90 SPS alternativ 50 ms für 20 SPS 
 
 		data_mutex.lock();
 		pressure_sensor1.write_command_adc_read(PRESSURE, &temp);
@@ -179,7 +180,7 @@ void sensor_thread() {
 	    usb_serial.printf("p1: %.2f\t t1: %.2f\tp2: %.2f\tt2: %.2f\tp3: %.2f\tt3: %.2f\tp4: %.2f\tt4: %.2f\tp5: %.2f\tt5: %.2f\tp6: %.2f\tt6: %.2f\tp7: %.2f\tt7: %.2f\n\r", tx_data.sensor1, tx_data.temp1, tx_data.sensor2, tx_data.temp2, tx_data.sensor3, tx_data.temp3, tx_data.sensor4, tx_data.temp4, tx_data.sensor5, tx_data.temp5, tx_data.sensor6, tx_data.temp6, tx_data.sensor7, tx_data.temp7);
 #endif
 	    event_flags.set(FLAG_CONVERSATION_SENSORS);
-	    rtos::ThisThread::sleep_for(20);						// !!! auf 50 für 20 SPS
+	    rtos::ThisThread::sleep_for(20);						
     }
 }
 /*
