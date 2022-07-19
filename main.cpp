@@ -8,6 +8,9 @@
 #include    "Honeywell_RSC.h"
 #include    "icm20948_dmp.h"
 #include    <cstring>
+#include    "sensor_config.h"
+#include    "diag_sensorboard.h"
+
 
 #define IP_ADDRESS         "192.168.000.003"
 #define NETMASK_ADDRESS    "192.168.000.001"
@@ -16,6 +19,7 @@
 #define ECHO_SERVER_PORT   	7
 #define DIAG_PORT   		8
 #define FLAG_CONVERSATION_SENSORS                 1
+#define FLAG_CONVERSATION_ETHERNET                2
 #define FLAG_DIAG           2
 #define BOARD_ID			0x03
 #define USB_SERIAL			0
@@ -43,14 +47,10 @@ Honeywell_RSC pressure_sensor4(&spi2, PC_0, PG_5);
 Honeywell_RSC pressure_sensor5(&spi2, PA_3, PG_6);
 MS5611_01BA03 pressure_sensor6(&spi6, PD_4);
 MS5611_01BA03 pressure_sensor7(&spi5, PF_10);
-ICM20948_DMP imu(&spi1, PF_6);
-
-Mutex data_mutex;
-InterruptIn isr_imu(PA_4);
-bool imu_isr_ready = false;
 
 
-struct sensor_data		// Struct dynamisch anpassen je nach Platinenversion
+
+struct data_frame		// Struct dynamisch anpassen je nach Platinenversion
 {
 	uint32_t counter;
 	uint8_t id;
@@ -71,95 +71,64 @@ struct sensor_data		// Struct dynamisch anpassen je nach Platinenversion
 	int32_t temp7;
 };
 
-struct sensor_data tx_data;
+struct data_frame sensor_data;
+struct data_frame ethernet_data;
+struct data_frame exchange_data;
 
-struct diag_data
-{
-	uint8_t id;
-	uint8_t data[8];
-};
+Thread  	thread1;
+Thread 		thread2;
+Thread 		thread3;
 
-void exti_imu()
-{
-	imu_isr_ready = true;
-}
+uint8_t sensor_thread_delay1;
+uint8_t sensor_thread_delay2;
 
-void imu_task()
-{
-	float gyro_x, gyro_y, gyro_z;
-	float accel_x, accel_y, accel_z;
-	float mag_x, mag_y, mag_z;
-	float quat_w, quat_x, quat_y, quat_z;
-	char sensor_string_buff[128];
-	while(true)
-	{
-		// Must call this often in main loop -- updates the sensor values
-		imu.task();
-		if (imu.gyroDataIsReady())
-		{
-			imu.readGyroData(&gyro_x, &gyro_y, &gyro_z);
-#if (USB_SERIAL == 1)
-			usb_serial.printf("%.2f,%.2f,%.2f\r\n", gyro_x, gyro_y, gyro_z);
-#endif
-		}
-		if (imu.quatDataIsReady())
-		{
-			imu.readQuatData(&quat_w, &quat_x, &quat_y, &quat_z);
-//			usb_serial.printf("{\"quat_w\":%f, \"quat_x\":%f, \"quat_y\":%f, \"quat_z\":%f}\n\r", quat_w, quat_x, quat_y, quat_z);
-		}
-		//rtos::ThisThread::sleep_for(50);
-	}
-}
+
 
 /*
  *Thread zum Auslesen der Sensordaten
  */
 void sensor_thread() {
 	int32_t temp = 0;
+	sensor_data.id = 0x01;
 	while (true)
     {
-		//txdata Zugriff sichern mit Mutex
-		data_mutex.lock();
+
 		pressure_sensor1.write_command_adc_read(TEMPERATURE, &temp);
-		tx_data.sensor1 = pressure_sensor1.calculate_pressure(temp);
+		sensor_data.sensor1 = pressure_sensor1.calculate_pressure(temp);
 
 		pressure_sensor2.write_command_adc_read(TEMPERATURE, &temp);
-		tx_data.sensor2 = pressure_sensor2.calculate_pressure(temp);
+		sensor_data.sensor2 = pressure_sensor2.calculate_pressure(temp);
 
 		pressure_sensor3.write_command_adc_read(TEMPERATURE, &temp);
-		tx_data.sensor3 = pressure_sensor3.calculate_pressure(temp);
+		sensor_data.sensor3 = pressure_sensor3.calculate_pressure(temp);
 
 		pressure_sensor4.write_command_adc_read(TEMPERATURE, &temp);
-		tx_data.sensor4 = pressure_sensor4.calculate_pressure(temp);
+		sensor_data.sensor4 = pressure_sensor4.calculate_pressure(temp);
 
 		pressure_sensor5.write_command_adc_read(TEMPERATURE, &temp);
-		tx_data.sensor5 = pressure_sensor5.calculate_pressure(temp);
+		sensor_data.sensor5 = pressure_sensor5.calculate_pressure(temp);
 
 		pressure_sensor6.read_conv_press();
 		pressure_sensor7.read_conv_press();
     	pressure_sensor6.start_conv_temp();
     	pressure_sensor7.start_conv_temp();
 
-    	data_mutex.unlock();
+    	rtos::ThisThread::sleep_for(sensor_thread_delay1);			// !!! auf 50 für 20 SPS
 
-		// sleep in ms
-    	rtos::ThisThread::sleep_for(20);			// entspricht 90 SPS alternativ 50 ms für 20 SPS 
-
-		data_mutex.lock();
 		pressure_sensor1.write_command_adc_read(PRESSURE, &temp);
-		tx_data.temp1 = pressure_sensor1.calculate_temperature(temp);
+		sensor_data.temp1 = pressure_sensor1.calculate_temperature(temp);
 
 		pressure_sensor2.write_command_adc_read(PRESSURE, &temp);
-		tx_data.temp2 = pressure_sensor2.calculate_temperature(temp);
+		sensor_data.temp2 = pressure_sensor2.calculate_temperature(temp);
 
 		pressure_sensor3.write_command_adc_read(PRESSURE, &temp);
-		tx_data.temp3 = pressure_sensor3.calculate_temperature(temp);
+		sensor_data.temp3 = pressure_sensor3.calculate_temperature(temp);
 
 		pressure_sensor4.write_command_adc_read(PRESSURE, &temp);
-		tx_data.temp4 = pressure_sensor4.calculate_temperature(temp);
+		sensor_data.temp4 = pressure_sensor4.calculate_temperature(temp);
 
 		pressure_sensor5.write_command_adc_read(PRESSURE, &temp);
-		tx_data.temp5 = pressure_sensor5.calculate_temperature(temp);
+		sensor_data.temp5 = pressure_sensor5.calculate_temperature(temp);
 
 		pressure_sensor6.read_conv_temp();
 		pressure_sensor7.read_conv_temp();
@@ -168,19 +137,24 @@ void sensor_thread() {
 		pressure_sensor6.calculate();
 		pressure_sensor7.calculate();
 
-		tx_data.sensor6 = pressure_sensor6.getPressure();
-		tx_data.temp6 = pressure_sensor6.getTemperature();
+		sensor_data.sensor6 = pressure_sensor6.getPressure();
+		sensor_data.temp6 = pressure_sensor6.getTemperature();
 
-		tx_data.sensor7 = pressure_sensor7.getPressure();
-		tx_data.temp7 = pressure_sensor7.getTemperature();
+		sensor_data.sensor7 = pressure_sensor7.getPressure();
+		sensor_data.temp7 = pressure_sensor7.getTemperature();
 
-		//txdata wieder freigeben
-		data_mutex.unlock();
 #if (USB_SERIAL == 1)
 	    usb_serial.printf("p1: %.2f\t t1: %.2f\tp2: %.2f\tt2: %.2f\tp3: %.2f\tt3: %.2f\tp4: %.2f\tt4: %.2f\tp5: %.2f\tt5: %.2f\tp6: %.2f\tt6: %.2f\tp7: %.2f\tt7: %.2f\n\r", tx_data.sensor1, tx_data.temp1, tx_data.sensor2, tx_data.temp2, tx_data.sensor3, tx_data.temp3, tx_data.sensor4, tx_data.temp4, tx_data.sensor5, tx_data.temp5, tx_data.sensor6, tx_data.temp6, tx_data.sensor7, tx_data.temp7);
 #endif
+
+	    event_flags.wait_any(FLAG_CONVERSATION_ETHERNET);
+
+        //copy sensor values in exchange buffer
+	    std::memcpy(&exchange_data, &sensor_data, sizeof(struct data_frame));
+
 	    event_flags.set(FLAG_CONVERSATION_SENSORS);
-	    rtos::ThisThread::sleep_for(20);						
+
+	    rtos::ThisThread::sleep_for(sensor_thread_delay2);						// !!! auf 50 für 20 SPS
     }
 }
 /*
@@ -190,56 +164,41 @@ void sensor_thread() {
 void ethernet_thread(Net_com* net_com) {
 
 	static uint32_t packages = 0;
-	tx_data.id = 0x01;
-	struct sensor_data tx_data_temp;
+
 	while (true)
     {
 		event_flags.wait_any(FLAG_CONVERSATION_SENSORS);		// Funktion wartet bis alle Sensordaten ausgelesen sind
 
-		/*if (imu.gyroDataIsReady())
-		{
-		    imu.readGyroData(&tx_data.gx, &tx_data.gy, &tx_data.gz);
-		}
+		exchange_data.timestamp = us_ticker_read() / 1000u;
+		exchange_data.counter = packages++;
+		std::memcpy(&ethernet_data, &exchange_data,  sizeof(struct data_frame));
+		event_flags.set(FLAG_CONVERSATION_ETHERNET);
 
-		if (imu.accelDataIsReady())
-		{
-			imu.readAccelData(&tx_data.ax, &tx_data.ay, &tx_data.az);
-		}
+		net_com->net_com_sendto(&ethernet_data,  sizeof(struct data_frame));	// erst dann werden Daten verschickt
 
-		if (imu.quatDataIsReady())
-		{
-			imu.readQuatData(&tx_data.quat_w, &tx_data.quat_x, &tx_data.quat_y, &tx_data.quat_z);
-		}*/
-
-		data_mutex.lock();
-	    tx_data.timestamp = us_ticker_read() / 1000u;
-		tx_data.counter = packages++;
-		std::memcpy(&tx_data_temp, &tx_data, sizeof(tx_data));
-		data_mutex.unlock();
-
-		net_com->net_com_sendto(&tx_data_temp, sizeof(tx_data_temp));	// erst dann werden Daten verschickt
     }
 }
 
 /*
- *  Callback fuer Diagnose via Ethernet
+ *  Callback for diagnostic via Ethernet
  */
 void net_receive_callback(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, u16_t port)
 {
 	struct diag_data* recv_diag = (struct diag_data*)(p->payload);
+	struct sensor_config sensor_thread_config;
 
 	switch(recv_diag->id)
 	{
 		//get Session
-		case 0x30:
+		case GET_SESSION:
 			//usb_serial.printf("get session\n\r");
-			recv_diag->id = recv_diag->id + 0x20;
+			recv_diag->id = recv_diag->id + CONTROL_WORD;
 			recv_diag->data[0] = 0x02;
 
 		break;
 
 		//start Bootloader
-		case 0x40:
+		case START_BOOTLOADER:
 			//usb_serial.printf("starting Bootloader\n\r");
 			SCB->VTOR = (FLASH_BASE);
 			JumpAddress = *(__IO uint32_t*) (FLASH_BASE);
@@ -248,25 +207,53 @@ void net_receive_callback(void *arg, struct udp_pcb *pcb, struct pbuf *p, const 
 		break;
 
 		//get board ID
-		case 0x50:
-			recv_diag->id = recv_diag->id + 0x20;
+		case GET_BOARD_ID:
+			recv_diag->id = recv_diag->id + CONTROL_WORD;
 			recv_diag->data[0] = BOARD_ID;
 		break;
 
 		//start sending sensor data
-		case 0x60:
-			recv_diag->id = recv_diag->id + 0x20;
-
+		case START_SENDING_SENSOR_DATA:
+			recv_diag->id = recv_diag->id + CONTROL_WORD;
+			thread1.start(sensor_thread);
+			thread2.start(sensor_thread);
 		break;
 
 		//stop sending sensor data
-		case 0x70:
-			recv_diag->id = recv_diag->id + 0x20;
-
+		case STOP_SENDING_SENSOR_DATA:
+			recv_diag->id = recv_diag->id + CONTROL_WORD;
+			thread1.terminate();
+			thread2.terminate();
 		break;
 		//get error informations
-		case 0x80:
-			recv_diag->id = recv_diag->id + 0x20;
+		case GET_ERROR_INFORMATION:
+			recv_diag->id = recv_diag->id + CONTROL_WORD;
+		break;
+
+		//set the config parameter for sensor thread
+		case SET_SENSOR_CONFIG:
+			recv_diag->id = recv_diag->id + CONTROL_WORD;
+			std::memcpy(&sensor_thread_config, recv_diag->data, sizeof(struct sensor_config));
+
+			thread1.terminate();
+			thread2.terminate();
+
+			pressure_sensor1.set_data_rate(sensor_thread_config.datarate);
+			pressure_sensor1.set_mode(sensor_thread_config.mode);
+			pressure_sensor2.set_data_rate(sensor_thread_config.datarate);
+			pressure_sensor2.set_mode(sensor_thread_config.mode);
+			pressure_sensor3.set_data_rate(sensor_thread_config.datarate);
+			pressure_sensor3.set_mode(sensor_thread_config.mode);
+			pressure_sensor4.set_data_rate(sensor_thread_config.datarate);
+			pressure_sensor4.set_mode(sensor_thread_config.mode);
+			pressure_sensor5.set_data_rate(sensor_thread_config.datarate);
+			pressure_sensor5.set_mode(sensor_thread_config.mode);
+			sensor_thread_delay1 = sensor_thread_config.delay;
+			sensor_thread_delay2 = sensor_thread_config.delay;
+
+			thread1.start(sensor_thread);
+			thread2.start(sensor_thread);
+
 		break;
 
 
@@ -293,20 +280,8 @@ int main()
 
 	eth.set_network(IP_ADDRESS,NETMASK_ADDRESS,GATEWAY_ADDRESS);
 	eth.connect();
-#if (USB_SERIAL == 1)
-//	icm20948_set_serial(&usb_serial);
-#endif
-//	imu_settings.mode = 1;
-//	imu_settings.enable_accelerometer = true;
-//	imu_settings.enable_gyroscope = true;
-//	imu_settings.enable_quaternion = true;
-//	imu_settings.spi_speed = 1200000UL;
-//	imu_settings.gyroscope_frequency = 50u;      // Max frequency = 225, min frequency = 1
-//	imu_settings.accelerometer_frequency = 50u;  // Max frequency = 225, min frequency = 1
-//	imu_settings.magnetometer_frequency = 50u;   // Max frequency = 70, min frequency = 1
-//	imu_settings.quaternion_frequency = 225u;     // Max frequency = 225, min frequency = 50
-//	imu.init(imu_settings);
-//	usb_serial.printf("init imu\r\n");
+
+
 	struct udp_pcb * upcb = udp_new();
 	Net_com 	net_com(IP_ADDRESS_SOCKET, ECHO_SERVER_PORT, upcb, NULL);
 	net_com.net_com_bind();
@@ -315,9 +290,6 @@ int main()
 	// Net_com 	diag_com(IP_ADDRESS_SOCKET, DIAG_PORT, upcb, net_receive_callback);
 	// diag_com.net_com_bind();
 
-	Thread  	thread1;
-	Thread 		thread2;
-	Thread 		thread3;
 
 	// Einstellung unterschiedlicher Modi entsprechend Datenblatt
 	pressure_sensor1.init(N_DR_90_SPS,NORMAL_MODE);
@@ -328,7 +300,14 @@ int main()
 	pressure_sensor6.init();
 	pressure_sensor7.init();
 
-    thread1.start(sensor_thread);				// Sensor thread aktivieren -> Ließt Daten aus Sensoren aus
+	//Set default values
+	sensor_thread_delay1 = 20;
+	sensor_thread_delay2 = 20;
+
+	//set start event
+	event_flags.set(FLAG_CONVERSATION_ETHERNET);
+
+    thread1.start(sensor_thread);				// Sensor thread aktivieren -> liest Daten aus Sensoren aus
     thread2.start(callback(ethernet_thread, &net_com));	// Ethernet thread aktivieren -> Aktiviert Datenbübertragung via Ethernet
 //    thread3.start(imu_task);
 //    thread3.start(diag_thread);
