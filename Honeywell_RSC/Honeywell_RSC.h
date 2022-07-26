@@ -30,8 +30,8 @@ public:
 
   // read from ADC
   void adc_read(READING_T type, uint8_t *data);
-  float get_temperature();
-  float get_pressure();
+  int32_t get_temperature();
+  int32_t get_pressure();
 
   // write to ADC
   void adc_write(uint8_t reg, uint8_t num_bytes, uint8_t *data);
@@ -52,8 +52,8 @@ public:
   char* pressure_unit_name() const {return _pressure_unit_name;}
   char* pressure_type_name() const {return _pressure_type_name;}
   void write_command_adc_read(READING_T type, int32_t* data);
-  float calculate_temperature(int32_t t_raw);
-  float calculate_pressure(int32_t p_raw);
+  int32_t calculate_temperature(int32_t t_raw);
+  int32_t calculate_pressure(int32_t p_raw);
   static void wait(RSC_DATA_RATE rate);
 private:
   // physical pin connections
