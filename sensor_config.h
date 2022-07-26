@@ -9,11 +9,14 @@
 #define SENSOR_CONFIG_H_
 /*
  * Parameter for the rsc sensors
+ * 1. byte datarate
+ * 2. byte mode
+ * 3. byte delay in ms
  */
 struct sensor_config
 {
-	RSC_DATA_RATE datarate;
-	RSC_MODE mode;
+	RSC_DATA_RATE datarate:8;
+	RSC_MODE mode:8;
 	uint8_t delay;
 };
 
