@@ -23,7 +23,7 @@
 struct diag_data
 {
 	uint8_t id;
-	uint8_t data[8];
+	uint8_t data[16];
 };
 
 
