@@ -74,23 +74,23 @@ MS5611_01BA03 pressure_sensor7(&spi5, PF_10);
 
 struct data_frame        // Struct dynamisch anpassen je nach Platinenversion
 {
-    uint32_t counter;
-    uint8_t id;
-    uint32_t timestamp;
-    int32_t sensor1;
-    int32_t sensor2;
-    int32_t sensor3;
-    int32_t sensor4;
-    int32_t sensor5;
-    int32_t sensor6;
-    int32_t sensor7;
-    int32_t temp1;
-    int32_t temp2;
-    int32_t temp3;
-    int32_t temp4;
-    int32_t temp5;
-    int32_t temp6;
-    int32_t temp7;
+    string counter;
+    string id;
+    string timestamp;
+    string sensor1;
+    string sensor2;
+    string sensor3;
+    string sensor4;
+    string sensor5;
+    string sensor6;
+    string sensor7;
+    string temp1;
+    string temp2;
+    string temp3;
+    string temp4;
+    string temp5;
+    string temp6;
+    string temp7;
 };
 
 struct data_frame sensor_data;
@@ -116,7 +116,7 @@ string  sensor_buffer2;
  */
 void sensor_thread() {
     int32_t temp = 0;
-    sensor_data.id = 0x01;
+    sensor_data.id = "0x01";
     string* buffer;
     buffer = &sensor_buffer1;
     static uint32_t packages = 0;
@@ -130,41 +130,41 @@ void sensor_thread() {
         }
 
         pressure_sensor1.write_command_adc_read(TEMPERATURE, &temp);
-        sensor_data.sensor1 = pressure_sensor1.calculate_pressure(temp);
+        sensor_data.sensor1 =  to_string(pressure_sensor1.calculate_pressure(temp));
 
         pressure_sensor2.write_command_adc_read(TEMPERATURE, &temp);
-        sensor_data.sensor2 = pressure_sensor2.calculate_pressure(temp);
+        sensor_data.sensor2 =  to_string(pressure_sensor2.calculate_pressure(temp));
 
         pressure_sensor3.write_command_adc_read(TEMPERATURE, &temp);
-        sensor_data.sensor3 = pressure_sensor3.calculate_pressure(temp);
+        sensor_data.sensor3 =  to_string(pressure_sensor3.calculate_pressure(temp));
 
         pressure_sensor4.write_command_adc_read(TEMPERATURE, &temp);
-        sensor_data.sensor4 = pressure_sensor4.calculate_pressure(temp);
+        sensor_data.sensor4 =  to_string(pressure_sensor4.calculate_pressure(temp));
 
         pressure_sensor5.write_command_adc_read(TEMPERATURE, &temp);
-        sensor_data.sensor5 = pressure_sensor5.calculate_pressure(temp);
+        sensor_data.sensor5 =  to_string(pressure_sensor5.calculate_pressure(temp));
 
         pressure_sensor6.read_conv_press();
         pressure_sensor7.read_conv_press();
         pressure_sensor6.start_conv_temp();
         pressure_sensor7.start_conv_temp();
 
-        rtos::ThisThread::sleep_for(sensor_thread_delay1);            // !!! auf 50 für 20 SPS
+        rtos::ThisThread::sleep_for(sensor_thread_delay1);            //waiting for conversion temperature
 
         pressure_sensor1.write_command_adc_read(PRESSURE, &temp);
-        sensor_data.temp1 = pressure_sensor1.calculate_temperature(temp);
+        sensor_data.temp1 =  to_string(pressure_sensor1.calculate_temperature(temp));
 
         pressure_sensor2.write_command_adc_read(PRESSURE, &temp);
-        sensor_data.temp2 = pressure_sensor2.calculate_temperature(temp);
+        sensor_data.temp2 =  to_string(pressure_sensor2.calculate_temperature(temp));
 
         pressure_sensor3.write_command_adc_read(PRESSURE, &temp);
-        sensor_data.temp3 = pressure_sensor3.calculate_temperature(temp);
+        sensor_data.temp3 =  to_string(pressure_sensor3.calculate_temperature(temp));
 
         pressure_sensor4.write_command_adc_read(PRESSURE, &temp);
-        sensor_data.temp4 = pressure_sensor4.calculate_temperature(temp);
+        sensor_data.temp4 =  to_string(pressure_sensor4.calculate_temperature(temp));
 
         pressure_sensor5.write_command_adc_read(PRESSURE, &temp);
-        sensor_data.temp5 = pressure_sensor5.calculate_temperature(temp);
+        sensor_data.temp5 =  to_string(pressure_sensor5.calculate_temperature(temp));
 
         pressure_sensor6.read_conv_temp();
         pressure_sensor7.read_conv_temp();
@@ -173,40 +173,42 @@ void sensor_thread() {
         pressure_sensor6.calculate();
         pressure_sensor7.calculate();
 
-        sensor_data.sensor6 = pressure_sensor6.getPressure();
-        sensor_data.temp6 = pressure_sensor6.getTemperature();
+        sensor_data.sensor6 = to_string(pressure_sensor6.getPressure());
+        sensor_data.temp6 = to_string(pressure_sensor6.getTemperature());
 
-        sensor_data.sensor7 = pressure_sensor7.getPressure();
-        sensor_data.temp7 = pressure_sensor7.getTemperature();
+        sensor_data.sensor7 = to_string(pressure_sensor7.getPressure());
+        sensor_data.temp7 = to_string(pressure_sensor7.getTemperature());
 
         event_flags.wait_all(FLAG_CONVERSATION_ETHERNET | FLAG_CONVERSATION_SERIAL);
         //increase message counter
-        sensor_data.counter = packages++;
+        sensor_data.counter =  to_string(packages++);
+        //save timestamp
+        sensor_data.timestamp = to_string(Kernel::get_ms_count());
 
-        *buffer = "," + to_string(Kernel::get_ms_count()) + "," + \
-                  to_string(sensor_data.counter) + "," + \
+        *buffer = "," + sensor_data.timestamp + "," + \
+                  sensor_data.counter + "," + \
 
-                  to_string(sensor_data.sensor1) + "," + \
-                  to_string(sensor_data.sensor2) + "," + \
-                  to_string(sensor_data.sensor3) + "," + \
-                  to_string(sensor_data.sensor4) + "," + \
-                  to_string(sensor_data.sensor5) + "," + \
-                  to_string(sensor_data.sensor6) + "," + \
-                  to_string(sensor_data.sensor7) + "," + \
+                  sensor_data.sensor1 + "," + \
+                  sensor_data.sensor2 + "," + \
+                  sensor_data.sensor3 + "," + \
+                  sensor_data.sensor4 + "," + \
+                  sensor_data.sensor5 + "," + \
+                  sensor_data.sensor6 + "," + \
+                  sensor_data.sensor7 + "," + \
 
-                  to_string(sensor_data.temp1) + "," + \
-                  to_string(sensor_data.temp2) + "," + \
-                  to_string(sensor_data.temp3) + "," + \
-                  to_string(sensor_data.temp4) + "," + \
-                  to_string(sensor_data.temp5) + "," + \
-                  to_string(sensor_data.temp6) + "," + \
-                  to_string(sensor_data.temp7) + "\n\r";
+                  sensor_data.temp1 + "," + \
+                  sensor_data.temp2 + "," + \
+                  sensor_data.temp3 + "," + \
+                  sensor_data.temp4 + "," + \
+                  sensor_data.temp5 + "," + \
+                  sensor_data.temp6 + "," + \
+                  sensor_data.temp7 + "\n\r";
         //set complete message
         *buffer = "$" + to_string(buffer->size()) + *buffer;
         //set events
         event_flags.set(FLAG_CONVERSATION_SENSORS_ETHERNET | FLAG_CONVERSATION_SENSORS_SERIAL);
 
-        rtos::ThisThread::sleep_for(sensor_thread_delay2);
+        rtos::ThisThread::sleep_for(sensor_thread_delay2); //waiting for conversion pressure
     }
 }
 /*
