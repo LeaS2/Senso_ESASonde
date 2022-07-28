@@ -133,8 +133,8 @@ void MS5611_01BA03::ms5611_01ba_readCalibration() {
 }
 
 bool MS5611_01BA03::init() {
-	DISABLE_BARO;
-	ThisThread::sleep_for(50);
+    DISABLE_BARO;
+    ThisThread::sleep_for(50);
     ms5611_01ba_reset();
     ms5611_01ba_readCalibration();
 
@@ -204,8 +204,8 @@ void MS5611_01BA03::calculate(void) {
 
 MS5611_01BA03::MS5611_01BA03(SPI *spi, PinName cs): m_spi(spi)
 {
-	m_cs = new DigitalOut(cs);
-	DISABLE_BARO;
+    m_cs = new DigitalOut(cs);
+    DISABLE_BARO;
     altitude = 0;
 }
 
@@ -223,7 +223,7 @@ int32_t MS5611_01BA03::getPressure()
 
 void MS5611_01BA03::calculateAltitude(void)
 {
-	altitude = (1.0f - pow((float)pressure/101325.0f, 0.190295f)) * 4433000.0f; //centimeter
+    altitude = (1.0f - pow((float)pressure/101325.0f, 0.190295f)) * 4433000.0f; //centimeter
 }
 
 int32_t MS5611_01BA03::getAltitude() {
