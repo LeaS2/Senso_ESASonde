@@ -180,6 +180,7 @@ void sensor_thread() {
         sensor_data.temp7 = to_string(pressure_sensor7.getTemperature());
 
         event_flags.wait_all(FLAG_CONVERSATION_ETHERNET | FLAG_CONVERSATION_SERIAL);
+
         //increase message counter
         sensor_data.counter =  to_string(packages++);
         //save timestamp
