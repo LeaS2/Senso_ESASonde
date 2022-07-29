@@ -109,8 +109,8 @@ Net_com*     diag_com;
 Net_com*     net_com;
 
 struct sensor_config sensor_thread_config;
-string  sensor_buffer1;
-string  sensor_buffer2;
+string  sensor_buffer_ethernet;
+string  sensor_buffer_serial;
 /*
  *Thread zum Auslesen der Sensordaten
  */
@@ -118,7 +118,7 @@ void sensor_thread() {
     int32_t temp = 0;
     sensor_data.id = "0x01";
     string* buffer;
-    buffer = &sensor_buffer1;
+
     static uint32_t packages = 0;
 
     while (true)
@@ -185,8 +185,10 @@ void sensor_thread() {
         sensor_data.counter =  to_string(packages++);
         //save timestamp
         sensor_data.timestamp = to_string(Kernel::get_ms_count());
-
-        *buffer = "," + sensor_data.timestamp + "," + \
+        //set pointer for ethernet buffer
+        buffer = &sensor_buffer_ethernet;
+        //set complete message
+        *buffer = "$," + sensor_data.timestamp + "," + \
                   sensor_data.counter + "," + \
 
                   sensor_data.sensor1 + "," + \
@@ -204,8 +206,27 @@ void sensor_thread() {
                   sensor_data.temp5 + "," + \
                   sensor_data.temp6 + "," + \
                   sensor_data.temp7 + "\n\r";
-        //set complete message
-        *buffer = "$" + to_string(buffer->size()) + *buffer;
+        //set pointer for serial buffer
+       buffer = &sensor_buffer_serial;
+       //set complete message
+       *buffer = "$," + sensor_data.timestamp + "," + \
+                 sensor_data.counter + "," + \
+
+                 sensor_data.sensor1 + "," + \
+                 sensor_data.sensor2 + "," + \
+                 sensor_data.sensor3 + "," + \
+                 sensor_data.sensor4 + "," + \
+                 sensor_data.sensor5 + "," + \
+                 sensor_data.sensor6 + "," + \
+                 sensor_data.sensor7 + "," + \
+
+                 sensor_data.temp1 + "," + \
+                 sensor_data.temp2 + "," + \
+                 sensor_data.temp3 + "," + \
+                 sensor_data.temp4 + "," + \
+                 sensor_data.temp5 + "," + \
+                 sensor_data.temp6 + "," + \
+                 sensor_data.temp7 + "\n\r";
         //set events
         event_flags.set(FLAG_CONVERSATION_SENSORS_ETHERNET | FLAG_CONVERSATION_SENSORS_SERIAL);
 
@@ -229,7 +250,7 @@ void ethernet_thread(Net_com* net_com)
             break;
         }
         event_flags.wait_any(FLAG_CONVERSATION_SENSORS_ETHERNET);        // Funktion wartet bis alle Sensordaten ausgelesen sind
-        net_com->net_com_sendto((void*)sensor_buffer1.c_str(),  sensor_buffer1.size());    // erst dann werden Daten verschickt
+        net_com->net_com_sendto((void*)sensor_buffer_ethernet.c_str(),  sensor_buffer_ethernet.size());    // erst dann werden Daten verschickt
         event_flags.set(FLAG_CONVERSATION_ETHERNET);
 
     }
@@ -257,7 +278,7 @@ void serial_thread()
         //wait for the sensor values
         event_flags.wait_any(FLAG_CONVERSATION_SENSORS_SERIAL);        // Funktion wartet bis alle Sensordaten ausgelesen sind
         //send data
-        serial_port.write((void*)sensor_buffer1.c_str(), sensor_buffer1.size());
+        serial_port.write((void*)sensor_buffer_serial.c_str(), sensor_buffer_serial.size());
         //sending data finished
         event_flags.set(FLAG_CONVERSATION_SERIAL);
     }
