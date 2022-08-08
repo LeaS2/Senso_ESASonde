@@ -32,7 +32,7 @@
 //board config
 #define BOARD_ID            0x03
 #define USB_SERIAL            0
-#define SENSOR_THREAD_DELAY 12
+#define SENSOR_THREAD_DELAY 13
 
 //serial port
 #define SERIAL_PORT_BAUDRATE 115200
@@ -95,6 +95,7 @@ struct data_frame        // Struct dynamisch anpassen je nach Platinenversion
 
 struct data_frame sensor_data;
 struct data_frame ethernet_data;
+struct data_frame serial_data;
 struct data_frame exchange_data;
 
 Thread      thread1;
@@ -108,17 +109,15 @@ uint8_t sensor_thread_delay2;
 Net_com*     diag_com;
 Net_com*     net_com;
 
+Mutex mutex;
+
 struct sensor_config sensor_thread_config;
-string  sensor_buffer1;
-string  sensor_buffer2;
 /*
  *Thread zum Auslesen der Sensordaten
  */
 void sensor_thread() {
     int32_t temp = 0;
     sensor_data.id = "0x01";
-    string* buffer;
-    buffer = &sensor_buffer1;
     static uint32_t packages = 0;
 
     while (true)
@@ -179,33 +178,17 @@ void sensor_thread() {
         sensor_data.sensor7 = to_string(pressure_sensor7.getPressure());
         sensor_data.temp7 = to_string(pressure_sensor7.getTemperature());
 
-        event_flags.wait_all(FLAG_CONVERSATION_ETHERNET | FLAG_CONVERSATION_SERIAL);
+//        event_flags.wait_all(FLAG_CONVERSATION_ETHERNET | FLAG_CONVERSATION_SERIAL);
 
         //increase message counter
         sensor_data.counter =  to_string(packages++);
         //save timestamp
         sensor_data.timestamp = to_string(Kernel::get_ms_count());
 
-        *buffer = "," + sensor_data.timestamp + "," + \
-                  sensor_data.counter + "," + \
+        mutex.lock();
+        memcpy(&exchange_data, &sensor_data, sizeof(struct data_frame));
+        mutex.unlock();
 
-                  sensor_data.sensor1 + "," + \
-                  sensor_data.sensor2 + "," + \
-                  sensor_data.sensor3 + "," + \
-                  sensor_data.sensor4 + "," + \
-                  sensor_data.sensor5 + "," + \
-                  sensor_data.sensor6 + "," + \
-                  sensor_data.sensor7 + "," + \
-
-                  sensor_data.temp1 + "," + \
-                  sensor_data.temp2 + "," + \
-                  sensor_data.temp3 + "," + \
-                  sensor_data.temp4 + "," + \
-                  sensor_data.temp5 + "," + \
-                  sensor_data.temp6 + "," + \
-                  sensor_data.temp7 + "\n\r";
-        //set complete message
-        *buffer = "$" + to_string(buffer->size()) + *buffer;
         //set events
         event_flags.set(FLAG_CONVERSATION_SENSORS_ETHERNET | FLAG_CONVERSATION_SENSORS_SERIAL);
 
@@ -220,7 +203,7 @@ void ethernet_thread(Net_com* net_com)
 {
 
    // static uint32_t packages = 0;
-
+    static string buffer;
     while (true)
     {
         if(ThisThread::flags_get() == STOP_FLAG)
@@ -228,9 +211,32 @@ void ethernet_thread(Net_com* net_com)
             ThisThread::flags_clear(STOP_FLAG);
             break;
         }
+
         event_flags.wait_any(FLAG_CONVERSATION_SENSORS_ETHERNET);        // Funktion wartet bis alle Sensordaten ausgelesen sind
-        net_com->net_com_sendto((void*)sensor_buffer1.c_str(),  sensor_buffer1.size());    // erst dann werden Daten verschickt
-        event_flags.set(FLAG_CONVERSATION_ETHERNET);
+
+        mutex.lock();
+        buffer = "$" + exchange_data.timestamp + "," + \
+                        exchange_data.counter + "," + \
+
+                        exchange_data.sensor1 + "," + \
+                        exchange_data.sensor2 + "," + \
+                        exchange_data.sensor3 + "," + \
+                        exchange_data.sensor4 + "," + \
+                        exchange_data.sensor5 + "," + \
+                        exchange_data.sensor6 + "," + \
+                        exchange_data.sensor7 + "," + \
+
+                        exchange_data.temp1 + "," + \
+                        exchange_data.temp2 + "," + \
+                        exchange_data.temp3 + "," + \
+                        exchange_data.temp4 + "," + \
+                        exchange_data.temp5 + "," + \
+                        exchange_data.temp6 + "," + \
+                        exchange_data.temp7 + "\n\r";
+        mutex.unlock();
+
+        net_com->net_com_sendto((void*)buffer.c_str(),  buffer.size());    // erst dann werden Daten verschickt
+//        event_flags.set(FLAG_CONVERSATION_ETHERNET);
 
     }
 }
@@ -246,7 +252,7 @@ void serial_thread()
             /* bits */ SERIAL_PORT_BITS,
             /* parity */ SERIAL_PORT_PARITY,
             /* stop bit */ SERIAL_PORT_STOPBIT);
-
+    static string buffer;
     while(true)
     {
         if(ThisThread::flags_get() == STOP_FLAG)
@@ -256,10 +262,31 @@ void serial_thread()
         }
         //wait for the sensor values
         event_flags.wait_any(FLAG_CONVERSATION_SENSORS_SERIAL);        // Funktion wartet bis alle Sensordaten ausgelesen sind
+
+        mutex.lock();
+        buffer = "$ESA" + exchange_data.timestamp + "," + \
+                        exchange_data.counter + "," + \
+
+                        exchange_data.sensor1 + "," + \
+                        exchange_data.sensor2 + "," + \
+                        exchange_data.sensor3 + "," + \
+                        exchange_data.sensor4 + "," + \
+                        exchange_data.sensor5 + "," + \
+                        exchange_data.sensor6 + "," + \
+                        exchange_data.sensor7 + "," + \
+
+                        exchange_data.temp1 + "," + \
+                        exchange_data.temp2 + "," + \
+                        exchange_data.temp3 + "," + \
+                        exchange_data.temp4 + "," + \
+                        exchange_data.temp5 + "," + \
+                        exchange_data.temp6 + "," + \
+                        exchange_data.temp7 + "\n\r";
+        mutex.unlock();
         //send data
-        serial_port.write((void*)sensor_buffer1.c_str(), sensor_buffer1.size());
+        serial_port.write((void*)buffer.c_str(), buffer.size());
         //sending data finished
-        event_flags.set(FLAG_CONVERSATION_SERIAL);
+//        event_flags.set(FLAG_CONVERSATION_SERIAL);
     }
 }
 /*
