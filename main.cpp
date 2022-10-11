@@ -215,7 +215,7 @@ void ethernet_thread(Net_com* net_com)
         event_flags.wait_any(FLAG_CONVERSATION_SENSORS_ETHERNET);        // Funktion wartet bis alle Sensordaten ausgelesen sind
 
         mutex.lock();
-        buffer = "$" + exchange_data.timestamp + "," + \
+        buffer = "$," + exchange_data.timestamp + "," + \
                         exchange_data.counter + "," + \
 
                         exchange_data.sensor1 + "," + \
@@ -434,7 +434,7 @@ int main()
     thread1.start(sensor_thread);                // Sensor thread aktivieren -> liest Daten aus Sensoren aus
     thread2.start(callback(ethernet_thread, net_com));    // Ethernet thread aktivieren -> Aktiviert Datenbübertragung via Ethernet
 //    thread3.start(diag_thread);
-    thread4.start(serial_thread);
+//    thread4.start(serial_thread);
 
     while(1);
 
