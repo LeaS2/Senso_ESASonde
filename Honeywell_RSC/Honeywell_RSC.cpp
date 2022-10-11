@@ -308,8 +308,9 @@ int32_t Honeywell_RSC::calculate_temperature(int32_t t_raw)
     {
         t_raw |= 0xFFFFC000;
     }
-    float temp = (float)t_raw * 0.03125f;
+    _t_raw = t_raw;
 
+    float temp = (float)t_raw * 0.03125f;
     temp = temp * 100u;
     return temp;
 }
@@ -616,4 +617,10 @@ void Honeywell_RSC::setup_adc(uint8_t* adc_init_values)
     adc_write(0, 4, command);
 
 }
-
+/*
+ * get raw temperatur
+ */
+int32_t Honeywell_RSC::getRawTemperatur()
+{
+    return _t_raw;
+}

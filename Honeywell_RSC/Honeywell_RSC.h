@@ -55,6 +55,8 @@ public:
   int32_t calculate_temperature(int32_t t_raw);
   int32_t calculate_pressure(int32_t p_raw);
   static void wait(RSC_DATA_RATE rate);
+  int32_t getRawTemperatur();
+
 private:
   // physical pin connections
   DigitalIn *m_drdy_pin;

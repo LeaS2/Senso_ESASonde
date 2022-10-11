@@ -151,19 +151,24 @@ void sensor_thread() {
         rtos::ThisThread::sleep_for(sensor_thread_delay1);            //waiting for conversion temperature
 
         pressure_sensor1.write_command_adc_read(PRESSURE, &temp);
-        sensor_data.temp1 =  to_string(pressure_sensor1.calculate_temperature(temp));
+        pressure_sensor1.calculate_temperature(temp);
+        sensor_data.temp1 = to_string(pressure_sensor1.getRawTemperatur());
 
         pressure_sensor2.write_command_adc_read(PRESSURE, &temp);
-        sensor_data.temp2 =  to_string(pressure_sensor2.calculate_temperature(temp));
+        pressure_sensor2.calculate_temperature(temp);
+        sensor_data.temp2 = to_string(pressure_sensor2.getRawTemperatur());
 
         pressure_sensor3.write_command_adc_read(PRESSURE, &temp);
-        sensor_data.temp3 =  to_string(pressure_sensor3.calculate_temperature(temp));
+        pressure_sensor3.calculate_temperature(temp);
+        sensor_data.temp3 = to_string(pressure_sensor3.getRawTemperatur());
 
         pressure_sensor4.write_command_adc_read(PRESSURE, &temp);
-        sensor_data.temp4 =  to_string(pressure_sensor4.calculate_temperature(temp));
+        pressure_sensor4.calculate_temperature(temp);
+        sensor_data.temp4 = to_string(pressure_sensor4.getRawTemperatur());
 
         pressure_sensor5.write_command_adc_read(PRESSURE, &temp);
-        sensor_data.temp5 =  to_string(pressure_sensor5.calculate_temperature(temp));
+        pressure_sensor5.calculate_temperature(temp);
+        sensor_data.temp5 = to_string(pressure_sensor5.getRawTemperatur());
 
         pressure_sensor6.read_conv_temp();
         pressure_sensor7.read_conv_temp();
