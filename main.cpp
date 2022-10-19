@@ -31,7 +31,7 @@
 
 //board config
 #define BOARD_ID            0x03
-#define USB_SERIAL            0
+#define USB_SERIAL            1
 #define SENSOR_THREAD_DELAY 13
 
 //serial port
@@ -428,6 +428,55 @@ int main()
     pressure_sensor5.init(N_DR_90_SPS,NORMAL_MODE);
     pressure_sensor6.init();
     pressure_sensor7.init();
+
+#if (USB_SERIAL == 1)
+    usb_serial.printf("Sensor1: \n\r");
+    for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
+    {
+        for(uint8_t y = 0; y < RSC_COEFF_T_COL_NO; y++)
+        {
+            usb_serial.printf("%.2f ", pressure_sensor1.getCoefficients(x,y));
+        }
+        usb_serial.printf("\n\r");
+    }
+
+    usb_serial.printf("Sensor2: \n\r");
+    for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
+    {
+        for(uint8_t y = 0; y < RSC_COEFF_T_COL_NO; y++)
+        {
+            usb_serial.printf("%.2f ", pressure_sensor2.getCoefficients(x,y));
+        }
+        usb_serial.printf("\n\r");
+    }
+    usb_serial.printf("Sensor3: \n\r");
+    for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
+    {
+        for(uint8_t y = 0; y < RSC_COEFF_T_COL_NO; y++)
+        {
+            usb_serial.printf("%.2f ", pressure_sensor3.getCoefficients(x,y));
+        }
+        usb_serial.printf("\n\r");
+    }
+    usb_serial.printf("Sensor4: \n\r");
+    for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
+    {
+        for(uint8_t y = 0; y < RSC_COEFF_T_COL_NO; y++)
+        {
+            usb_serial.printf("%.2f ", pressure_sensor4.getCoefficients(x,y));
+        }
+        usb_serial.printf("\n\r");
+    }
+    usb_serial.printf("Sensor5: \n\r");
+    for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
+    {
+        for(uint8_t y = 0; y < RSC_COEFF_T_COL_NO; y++)
+        {
+            usb_serial.printf("%.2f ", pressure_sensor5.getCoefficients(x,y));
+        }
+        usb_serial.printf("\n\r");
+    }
+#endif
 
     //Set default values
     sensor_thread_delay1 = SENSOR_THREAD_DELAY;

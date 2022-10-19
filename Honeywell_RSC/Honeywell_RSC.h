@@ -56,6 +56,7 @@ public:
   int32_t calculate_pressure(int32_t p_raw);
   static void wait(RSC_DATA_RATE rate);
   int32_t getRawTemperatur();
+  float getCoefficients(uint8_t row, uint8_t column);
 
 private:
   // physical pin connections

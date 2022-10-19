@@ -624,3 +624,11 @@ int32_t Honeywell_RSC::getRawTemperatur()
 {
     return _t_raw;
 }
+
+/*
+ *
+ */
+float Honeywell_RSC::getCoefficients(uint8_t row, uint8_t column)
+{
+    return _coeff_matrix[row][column];
+}
