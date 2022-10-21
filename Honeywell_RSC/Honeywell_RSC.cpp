@@ -632,3 +632,13 @@ float Honeywell_RSC::getCoefficients(uint8_t row, uint8_t column)
 {
     return _coeff_matrix[row][column];
 }
+
+float Honeywell_RSC::getPressureRange()
+{
+    return _pressure_range;
+}
+
+float Honeywell_RSC::getPressureMinimum()
+{
+    return _pressure_minimum;
+}

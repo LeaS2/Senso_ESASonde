@@ -57,7 +57,8 @@ public:
   static void wait(RSC_DATA_RATE rate);
   int32_t getRawTemperatur();
   float getCoefficients(uint8_t row, uint8_t column);
-
+  float getPressureRange();
+  float getPressureMinimum();
 private:
   // physical pin connections
   DigitalIn *m_drdy_pin;

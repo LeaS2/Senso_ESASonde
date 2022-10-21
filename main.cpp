@@ -439,6 +439,8 @@ int main()
         }
         usb_serial.printf("\n\r");
     }
+    usb_serial.printf("Sensor1 pressure range: %.2f\n\r", pressure_sensor1.getPressureRange());
+    usb_serial.printf("Sensor1 pressure minimum:  %.2f\n\r", pressure_sensor1.getPressureMinimum());
 
     usb_serial.printf("Sensor2: \n\r");
     for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
@@ -449,6 +451,9 @@ int main()
         }
         usb_serial.printf("\n\r");
     }
+    usb_serial.printf("Sensor2 pressure range: %.2f\n\r", pressure_sensor2.getPressureRange());
+    usb_serial.printf("Sensor2 pressure minimum:  %.2f\n\r", pressure_sensor2.getPressureMinimum());
+
     usb_serial.printf("Sensor3: \n\r");
     for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
     {
@@ -458,6 +463,9 @@ int main()
         }
         usb_serial.printf("\n\r");
     }
+    usb_serial.printf("Sensor3 pressure range: %.2f\n\r", pressure_sensor3.getPressureRange());
+    usb_serial.printf("Sensor3 pressure minimum:  %.2f\n\r", pressure_sensor3.getPressureMinimum());
+
     usb_serial.printf("Sensor4: \n\r");
     for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
     {
@@ -467,6 +475,9 @@ int main()
         }
         usb_serial.printf("\n\r");
     }
+    usb_serial.printf("Sensor4 pressure range: %.2f\n\r", pressure_sensor4.getPressureRange());
+    usb_serial.printf("Sensor4 pressure minimum:  %.2f\n\r", pressure_sensor4.getPressureMinimum());
+
     usb_serial.printf("Sensor5: \n\r");
     for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
     {
@@ -476,6 +487,8 @@ int main()
         }
         usb_serial.printf("\n\r");
     }
+    usb_serial.printf("Sensor5 pressure range: %.2f\n\r", pressure_sensor5.getPressureRange());
+    usb_serial.printf("Sensor5 pressure minimum:  %.2f\n\r", pressure_sensor5.getPressureMinimum());
 #endif
 
     //Set default values
