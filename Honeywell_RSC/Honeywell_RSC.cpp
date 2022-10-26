@@ -641,7 +641,7 @@ float Honeywell_RSC::getPressureMinimum()
     return _pressure_minimum;
 }
 
-string Honeywell_RSC::getPressureUnit()
+const char* Honeywell_RSC::getPressureUnit()
 {
     return _pressure_unit_name;
 }

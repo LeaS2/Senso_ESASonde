@@ -59,7 +59,7 @@ public:
   float getCoefficients(uint8_t row, uint8_t column);
   float getPressureMinimum();
   float getPressureRange();
-  string getPressureUnit();
+  const char* getPressureUnit();
   int32_t getRawPressure();
 
 private:
