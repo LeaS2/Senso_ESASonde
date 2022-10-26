@@ -57,6 +57,10 @@ public:
   static void wait(RSC_DATA_RATE rate);
   int32_t getRawTemperatur();
   float getCoefficients(uint8_t row, uint8_t column);
+  float getPressureMinimum();
+  float getPressureRange();
+  string getPressureUnit();
+  int32_t getRawPressure();
 
 private:
   // physical pin connections
@@ -84,6 +88,7 @@ private:
   // for calculating compensated pressure
   float _coeff_matrix[RSC_COEFF_T_ROW_NO][RSC_COEFF_T_COL_NO];
   int32_t _t_raw;
+  int32_t _p_raw;
 };
 
 #endif // HONEYWELL_RSC_H
