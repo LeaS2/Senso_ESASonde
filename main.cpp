@@ -458,7 +458,7 @@ int main()
     }
     usb_serial.printf("Sensor1 pressure range: %.f \n\r", pressure_sensor1.getPressureRange());
 	usb_serial.printf("Sensor1 pressure minimum: %.f \n\r", pressure_sensor1.getPressureMinimum());
-	usb_serial.printf("Sensor1 pressure minimum: %s \n\r", pressure_sensor1.getPressureUnit());
+	usb_serial.printf("Sensor1 pressure unit: %s \n\r", pressure_sensor1.getPressureUnit());
 
     usb_serial.printf("Sensor2: \n\r");
     for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
@@ -471,7 +471,7 @@ int main()
     }
     usb_serial.printf("Sensor2 pressure range: %.f \n\r", pressure_sensor2.getPressureRange());
 	usb_serial.printf("Sensor2 pressure minimum: %.f \n\r", pressure_sensor2.getPressureMinimum());
-	usb_serial.printf("Sensor2 pressure minimum: %s \n\r", pressure_sensor2.getPressureUnit());
+	usb_serial.printf("Sensor2 pressure unit: %s \n\r", pressure_sensor2.getPressureUnit());
 
     usb_serial.printf("Sensor3: \n\r");
     for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
@@ -484,7 +484,7 @@ int main()
     }
     usb_serial.printf("Sensor3 pressure range: %.f \n\r", pressure_sensor3.getPressureRange());
 	usb_serial.printf("Sensor3 pressure minimum: %.f \n\r", pressure_sensor3.getPressureMinimum());
-	usb_serial.printf("Sensor3 pressure minimum: %s \n\r", pressure_sensor3.getPressureUnit());
+	usb_serial.printf("Sensor3 pressure unit: %s \n\r", pressure_sensor3.getPressureUnit());
 
     usb_serial.printf("Sensor4: \n\r");
     for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
@@ -497,7 +497,7 @@ int main()
     }
     usb_serial.printf("Sensor4 pressure range: %.f \n\r", pressure_sensor4.getPressureRange());
 	usb_serial.printf("Sensor4 pressure minimum: %.f \n\r", pressure_sensor4.getPressureMinimum());
-	usb_serial.printf("Sensor4 pressure minimum: %s \n\r", pressure_sensor4.getPressureUnit());
+	usb_serial.printf("Sensor4 pressure unit: %s \n\r", pressure_sensor4.getPressureUnit());
 
     usb_serial.printf("Sensor5: \n\r");
     for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
@@ -510,7 +510,7 @@ int main()
     }
     usb_serial.printf("Sensor5 pressure range: %.f \n\r", pressure_sensor5.getPressureRange());
     usb_serial.printf("Sensor5 pressure minimum: %.f \n\r", pressure_sensor5.getPressureMinimum());
-    usb_serial.printf("Sensor5 pressure minimum: %s \n\r", pressure_sensor5.getPressureUnit());
+    usb_serial.printf("Sensor5 pressure unit: %s \n\r", pressure_sensor5.getPressureUnit());
 
 #endif
 
@@ -519,10 +519,10 @@ int main()
     sensor_thread_delay2 = SENSOR_THREAD_DELAY;
 
     //set start events
-    event_flags.set(FLAG_CONVERSATION_ETHERNET | FLAG_CONVERSATION_SERIAL);
+    // event_flags.set(FLAG_CONVERSATION_ETHERNET | FLAG_CONVERSATION_SERIAL);
 
-    thread1.start(sensor_thread);                // Sensor thread aktivieren -> liest Daten aus Sensoren aus
-    thread2.start(callback(ethernet_thread, net_com));    // Ethernet thread aktivieren -> Aktiviert Datenbübertragung via Ethernet
+    // thread1.start(sensor_thread);                // Sensor thread aktivieren -> liest Daten aus Sensoren aus
+    // thread2.start(callback(ethernet_thread, net_com));    // Ethernet thread aktivieren -> Aktiviert Datenbübertragung via Ethernet
 //    thread3.start(diag_thread);
 //    thread4.start(serial_thread);
 
