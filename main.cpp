@@ -82,15 +82,20 @@ struct data_frame        // Struct dynamisch anpassen je nach Platinenversion
     string sensor3;
     string sensor4;
     string sensor5;
-    string sensor6;
-    string sensor7;
+    // string sensor6;
+    // string sensor7;
+    string sensor1_raw;
+    string sensor2_raw;
+    string sensor3_raw;
+    string sensor4_raw;
+    string sensor5_raw;
     string temp1;
     string temp2;
     string temp3;
     string temp4;
     string temp5;
-    string temp6;
-    string temp7;
+    // string temp6;
+    // string temp7;
 };
 
 struct data_frame sensor_data;
@@ -130,23 +135,28 @@ void sensor_thread() {
 
         pressure_sensor1.write_command_adc_read(TEMPERATURE, &temp);
         sensor_data.sensor1 =  to_string(pressure_sensor1.calculate_pressure(temp));
+        sensor_data.sensor1_raw = to_string(pressure_sensor1.getRawTemperatur());
 
         pressure_sensor2.write_command_adc_read(TEMPERATURE, &temp);
         sensor_data.sensor2 =  to_string(pressure_sensor2.calculate_pressure(temp));
+        sensor_data.sensor2_raw = to_string(pressure_sensor2.getRawTemperatur());
 
         pressure_sensor3.write_command_adc_read(TEMPERATURE, &temp);
         sensor_data.sensor3 =  to_string(pressure_sensor3.calculate_pressure(temp));
+        sensor_data.sensor3_raw = to_string(pressure_sensor3.getRawTemperatur());
 
         pressure_sensor4.write_command_adc_read(TEMPERATURE, &temp);
         sensor_data.sensor4 =  to_string(pressure_sensor4.calculate_pressure(temp));
+        sensor_data.sensor4_raw = to_string(pressure_sensor4.getRawTemperatur());
 
         pressure_sensor5.write_command_adc_read(TEMPERATURE, &temp);
         sensor_data.sensor5 =  to_string(pressure_sensor5.calculate_pressure(temp));
+        sensor_data.sensor5_raw = to_string(pressure_sensor5.getRawTemperatur());
 
-        pressure_sensor6.read_conv_press();
-        pressure_sensor7.read_conv_press();
-        pressure_sensor6.start_conv_temp();
-        pressure_sensor7.start_conv_temp();
+        // pressure_sensor6.read_conv_press();
+        // pressure_sensor7.read_conv_press();
+        // pressure_sensor6.start_conv_temp();
+        // pressure_sensor7.start_conv_temp();
 
         rtos::ThisThread::sleep_for(sensor_thread_delay1);            //waiting for conversion temperature
 
@@ -170,18 +180,18 @@ void sensor_thread() {
         pressure_sensor5.calculate_temperature(temp);
         sensor_data.temp5 = to_string(pressure_sensor5.getRawTemperatur());
 
-        pressure_sensor6.read_conv_temp();
-        pressure_sensor7.read_conv_temp();
-        pressure_sensor6.start_conv_press();
-        pressure_sensor7.start_conv_press();
-        pressure_sensor6.calculate();
-        pressure_sensor7.calculate();
+        // pressure_sensor6.read_conv_temp();
+        // pressure_sensor7.read_conv_temp();
+        // pressure_sensor6.start_conv_press();
+        // pressure_sensor7.start_conv_press();
+        // pressure_sensor6.calculate();
+        // pressure_sensor7.calculate();
 
-        sensor_data.sensor6 = to_string(pressure_sensor6.getPressure());
-        sensor_data.temp6 = to_string(pressure_sensor6.getTemperature());
+        // sensor_data.sensor6 = to_string(pressure_sensor6.getPressure());
+        // sensor_data.temp6 = to_string(pressure_sensor6.getTemperature());
 
-        sensor_data.sensor7 = to_string(pressure_sensor7.getPressure());
-        sensor_data.temp7 = to_string(pressure_sensor7.getTemperature());
+        // sensor_data.sensor7 = to_string(pressure_sensor7.getPressure());
+        // sensor_data.temp7 = to_string(pressure_sensor7.getTemperature());
 
 //        event_flags.wait_all(FLAG_CONVERSATION_ETHERNET | FLAG_CONVERSATION_SERIAL);
 
@@ -228,16 +238,22 @@ void ethernet_thread(Net_com* net_com)
                         exchange_data.sensor3 + "," + \
                         exchange_data.sensor4 + "," + \
                         exchange_data.sensor5 + "," + \
-                        exchange_data.sensor6 + "," + \
-                        exchange_data.sensor7 + "," + \
+                        // exchange_data.sensor6 + "," + \
+                        // exchange_data.sensor7 + "," + \
+
+						exchange_data.sensor1_raw + "," + \
+						exchange_data.sensor2_raw + "," + \
+						exchange_data.sensor3_raw + "," + \
+						exchange_data.sensor4_raw + "," + \
+						exchange_data.sensor5_raw + "," + \
 
                         exchange_data.temp1 + "," + \
                         exchange_data.temp2 + "," + \
                         exchange_data.temp3 + "," + \
                         exchange_data.temp4 + "," + \
-                        exchange_data.temp5 + "," + \
-                        exchange_data.temp6 + "," + \
-                        exchange_data.temp7 + "\n\r";
+                        exchange_data.temp5 + "\n\r";
+                        // exchange_data.temp6 + "," + \
+                        // exchange_data.temp7 + "\n\r";
         mutex.unlock();
 
         net_com->net_com_sendto((void*)buffer.c_str(),  buffer.size());    // erst dann werden Daten verschickt
@@ -277,16 +293,16 @@ void serial_thread()
                         exchange_data.sensor3 + "," + \
                         exchange_data.sensor4 + "," + \
                         exchange_data.sensor5 + "," + \
-                        exchange_data.sensor6 + "," + \
-                        exchange_data.sensor7 + "," + \
+                        //exchange_data.sensor6 + "," + \
+                        //exchange_data.sensor7 + "," + \
 
                         exchange_data.temp1 + "," + \
                         exchange_data.temp2 + "," + \
                         exchange_data.temp3 + "," + \
                         exchange_data.temp4 + "," + \
-                        exchange_data.temp5 + "," + \
-                        exchange_data.temp6 + "," + \
-                        exchange_data.temp7 + "\n\r";
+                        exchange_data.temp5 + "\n\r";
+                        //exchange_data.temp6 + "," + \
+                        //exchange_data.temp7 + "\n\r";
         mutex.unlock();
         //send data
         serial_port.write((void*)buffer.c_str(), buffer.size());
@@ -430,6 +446,7 @@ int main()
     pressure_sensor7.init();
 
 #if (USB_SERIAL == 1)
+
     usb_serial.printf("Sensor1: \n\r");
     for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
     {
@@ -439,6 +456,9 @@ int main()
         }
         usb_serial.printf("\n\r");
     }
+    usb_serial.printf("Sensor1 pressure range: %.f \n\r", pressure_sensor1.getPressureRange());
+	usb_serial.printf("Sensor1 pressure minimum: %.f \n\r", pressure_sensor1.getPressureMinimum());
+	usb_serial.printf("Sensor1 pressure minimum: %s \n\r", pressure_sensor1.getPressureUnit());
 
     usb_serial.printf("Sensor2: \n\r");
     for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
@@ -449,6 +469,10 @@ int main()
         }
         usb_serial.printf("\n\r");
     }
+    usb_serial.printf("Sensor2 pressure range: %.f \n\r", pressure_sensor2.getPressureRange());
+	usb_serial.printf("Sensor2 pressure minimum: %.f \n\r", pressure_sensor2.getPressureMinimum());
+	usb_serial.printf("Sensor2 pressure minimum: %s \n\r", pressure_sensor2.getPressureUnit());
+
     usb_serial.printf("Sensor3: \n\r");
     for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
     {
@@ -458,6 +482,10 @@ int main()
         }
         usb_serial.printf("\n\r");
     }
+    usb_serial.printf("Sensor3 pressure range: %.f \n\r", pressure_sensor3.getPressureRange());
+	usb_serial.printf("Sensor3 pressure minimum: %.f \n\r", pressure_sensor3.getPressureMinimum());
+	usb_serial.printf("Sensor3 pressure minimum: %s \n\r", pressure_sensor3.getPressureUnit());
+
     usb_serial.printf("Sensor4: \n\r");
     for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
     {
@@ -467,6 +495,10 @@ int main()
         }
         usb_serial.printf("\n\r");
     }
+    usb_serial.printf("Sensor4 pressure range: %.f \n\r", pressure_sensor4.getPressureRange());
+	usb_serial.printf("Sensor4 pressure minimum: %.f \n\r", pressure_sensor4.getPressureMinimum());
+	usb_serial.printf("Sensor4 pressure minimum: %s \n\r", pressure_sensor4.getPressureUnit());
+
     usb_serial.printf("Sensor5: \n\r");
     for(uint8_t x = 0; x < RSC_COEFF_T_ROW_NO; x++)
     {
@@ -476,6 +508,10 @@ int main()
         }
         usb_serial.printf("\n\r");
     }
+    usb_serial.printf("Sensor5 pressure range: %.f \n\r", pressure_sensor5.getPressureRange());
+    usb_serial.printf("Sensor5 pressure minimum: %.f \n\r", pressure_sensor5.getPressureMinimum());
+    usb_serial.printf("Sensor5 pressure minimum: %s \n\r", pressure_sensor5.getPressureUnit());
+
 #endif
 
     //Set default values
@@ -490,6 +526,88 @@ int main()
 //    thread3.start(diag_thread);
 //    thread4.start(serial_thread);
 
-    while(1);
+    while (true)
+    {
+		int32_t temp = 0;
+		sensor_data.id = "0x01";
+		static uint32_t packages = 0;
+
+		pressure_sensor1.write_command_adc_read(TEMPERATURE, &temp);
+		sensor_data.sensor1 =  to_string(pressure_sensor1.calculate_pressure(temp));
+		sensor_data.sensor1_raw = to_string(pressure_sensor1.getRawTemperatur());
+
+		pressure_sensor2.write_command_adc_read(TEMPERATURE, &temp);
+		sensor_data.sensor2 =  to_string(pressure_sensor2.calculate_pressure(temp));
+		sensor_data.sensor2_raw = to_string(pressure_sensor2.getRawTemperatur());
+
+		pressure_sensor3.write_command_adc_read(TEMPERATURE, &temp);
+		sensor_data.sensor3 =  to_string(pressure_sensor3.calculate_pressure(temp));
+		sensor_data.sensor3_raw = to_string(pressure_sensor3.getRawTemperatur());
+
+		pressure_sensor4.write_command_adc_read(TEMPERATURE, &temp);
+		sensor_data.sensor4 =  to_string(pressure_sensor4.calculate_pressure(temp));
+		sensor_data.sensor4_raw = to_string(pressure_sensor4.getRawTemperatur());
+
+		pressure_sensor5.write_command_adc_read(TEMPERATURE, &temp);
+		sensor_data.sensor5 =  to_string(pressure_sensor5.calculate_pressure(temp));
+		sensor_data.sensor5_raw = to_string(pressure_sensor5.getRawTemperatur());
+
+        rtos::ThisThread::sleep_for(sensor_thread_delay1);            //waiting for conversion temperature
+
+        pressure_sensor1.write_command_adc_read(PRESSURE, &temp);
+        pressure_sensor1.calculate_temperature(temp);
+        sensor_data.temp1 = to_string(pressure_sensor1.getRawTemperatur());
+
+        pressure_sensor2.write_command_adc_read(PRESSURE, &temp);
+        pressure_sensor2.calculate_temperature(temp);
+        sensor_data.temp2 = to_string(pressure_sensor2.getRawTemperatur());
+
+        pressure_sensor3.write_command_adc_read(PRESSURE, &temp);
+        pressure_sensor3.calculate_temperature(temp);
+        sensor_data.temp3 = to_string(pressure_sensor3.getRawTemperatur());
+
+        pressure_sensor4.write_command_adc_read(PRESSURE, &temp);
+        pressure_sensor4.calculate_temperature(temp);
+        sensor_data.temp4 = to_string(pressure_sensor4.getRawTemperatur());
+
+        pressure_sensor5.write_command_adc_read(PRESSURE, &temp);
+        pressure_sensor5.calculate_temperature(temp);
+        sensor_data.temp5 = to_string(pressure_sensor5.getRawTemperatur());
+
+        //increase message counter
+        sensor_data.counter =  to_string(packages++);
+        //save timestamp
+        sensor_data.timestamp = to_string(Kernel::get_ms_count());
+
+        memcpy(&exchange_data, &sensor_data, sizeof(struct data_frame));
+
+        rtos::ThisThread::sleep_for(sensor_thread_delay2); //waiting for conversion pressure
+
+        // static uint32_t packages = 0;
+		static string buffer;
+
+		buffer = "$," + exchange_data.timestamp + "," + \
+						exchange_data.counter + "," + \
+
+						exchange_data.sensor1 + "," + \
+						exchange_data.sensor2 + "," + \
+						exchange_data.sensor3 + "," + \
+						exchange_data.sensor4 + "," + \
+						exchange_data.sensor5 + "," + \
+
+						exchange_data.sensor1_raw + "," + \
+						exchange_data.sensor2_raw + "," + \
+						exchange_data.sensor3_raw + "," + \
+						exchange_data.sensor4_raw + "," + \
+						exchange_data.sensor5_raw + "," + \
+
+						exchange_data.temp1 + "," + \
+						exchange_data.temp2 + "," + \
+						exchange_data.temp3 + "," + \
+						exchange_data.temp4 + "," + \
+						exchange_data.temp5 + "\n\r";
+
+		net_com->net_com_sendto((void*)buffer.c_str(),  buffer.size());    // erst dann werden Daten verschickt
+    }
 
 }
