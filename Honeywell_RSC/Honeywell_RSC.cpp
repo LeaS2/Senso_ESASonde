@@ -324,6 +324,7 @@ int32_t Honeywell_RSC::calculate_pressure(int32_t p_raw)
         p_raw |= 0xFF000000;
     }
 
+    _p_raw = p_raw;
     // calculate compensated pressure
     // refer to datasheet section 1.3 Compensation Mathematics
     float x = (_coeff_matrix[0][3] * _t_raw * _t_raw * _t_raw);
@@ -623,6 +624,26 @@ void Honeywell_RSC::setup_adc(uint8_t* adc_init_values)
 int32_t Honeywell_RSC::getRawTemperatur()
 {
     return _t_raw;
+}
+
+int32_t Honeywell_RSC::getRawPressure()
+{
+    return _p_raw;
+}
+
+float Honeywell_RSC::getPressureRange()
+{
+    return _pressure_range;
+}
+
+float Honeywell_RSC::getPressureMinimum()
+{
+    return _pressure_minimum;
+}
+
+string Honeywell_RSC::getPressureUnit()
+{
+    return _pressure_unit_name;
 }
 
 /*
